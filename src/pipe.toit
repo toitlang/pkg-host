@@ -79,6 +79,9 @@ class OpenPipe implements reader.Reader:
 
   close:
     close_ resource_
+    if state_:
+      state_.dispose
+      state_ = null
 
   is_a_terminal -> bool:
     return is_a_tty_ resource_
@@ -246,7 +249,9 @@ See $exit_code and $exit_signal.
 wait_for subprocess:
   wait_for_ subprocess
   state := monitor.ResourceState_ process_resource_group_ subprocess
-  return state.wait
+  exit_value := state.wait
+  state.dispose
+  return exit_value
 
 // Fork a program, and return the exit status.  Zero indicates the program
 // ran without errors.  Uses the /bin/sh shell to parse the command, which
