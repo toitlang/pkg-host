@@ -107,7 +107,7 @@ class DirectoryStream:
       dir_ = null
 
 opendir_ resource_group name:
-  #primitive.file.opendir
+  #primitive.file.opendir2
 
 readdir_ dir -> ByteArray:
   #primitive.file.readdir
