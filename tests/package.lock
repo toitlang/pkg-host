@@ -1,5 +1,0 @@
-prefixes:
-  host: ..
-packages:
-  ..:
-    path: ..
