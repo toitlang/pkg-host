@@ -21,6 +21,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" OR "${CMAKE_SYSTEM_NAME}" STREQUAL
     ${TEST_PREFIX}/tests/file_test.toit
     ${TEST_PREFIX}/tests/pipe_test.toit
     ${TEST_PREFIX}/tests/pipe2_test.toit
+    ${TEST_PREFIX}/tests/fork_stress_test_slow.toit
   )
 endif()
 
