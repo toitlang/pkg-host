@@ -13,8 +13,11 @@ expect_error name [code]:
     name
     catch code
 
-expect_file_not_found [code]:
-  expect_error "No such file or directory" code
+expect_file_not_found cmd [code]:
+  if (cmd.index_of " ") == -1:
+    expect_error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
+  else:
+    expect_error "Error trying to run executable with a space in the filename: '$cmd': No such file or directory" code
 
 main:
   // This test does not work on ESP32 since you can't launch subprocesses.
@@ -33,10 +36,10 @@ main:
 
   // run_program does not parse the command line, splitting at spaces, so it's
   // looking for a single program of the name "ls /bin/sh".
-  expect_file_not_found: pipe.run_program "ls /bin/sh"
+  expect_file_not_found "ls /bin/sh": pipe.run_program "ls /bin/sh"
 
   // There's no such program as ll.
-  expect_file_not_found: pipe.run_program "ll" "/bin/sh"
+  expect_file_not_found "ll": pipe.run_program "ll" "/bin/sh"
 
   expect_equals
     0
@@ -62,7 +65,8 @@ main:
   // calls.
   if platform == "FreeRTOS": return
 
-  expect_file_not_found: pipe.to "a program name that does not exist"
+  no_exist_cmd := "a program name that does not exist"
+  expect_file_not_found no_exist_cmd : pipe.to no_exist_cmd
 
   tmpdir := mkdtemp "/tmp/toit_file_test_"
 
