@@ -125,8 +125,7 @@ create_pipe_helper_ input_flag index result:
 // subprocess as open file descriptors 3 and/or 4.
 fork use_path stdin stdout stderr --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
   result := List 4
-  error := true
-  try:
+  exception := catch:
     if stdin == PIPE_CREATED:
       stdin = create_pipe_helper_ true 0 result
     if stdout == PIPE_CREATED:
@@ -135,24 +134,29 @@ fork use_path stdin stdout stderr --file_descriptor_3/OpenPipe?=null --file_desc
       stderr = create_pipe_helper_ false 2 result
     fd_3 := file_descriptor_3 ? file_descriptor_3.fd : -1
     fd_4 := file_descriptor_4 ? file_descriptor_4.fd : -1
-    result[3] = fork_ process_resource_group_ use_path stdin stdout stderr fd_3 fd_4 arguments[0] (Array_.ensure arguments)
-    error = false
-    return result
-  finally:
-    if error:
-      // If an exception is thrown we end up here.  If the fork succeeded then
-      // the pipes would be closed.  Here we have an error and need to close
-      // the pipes that we opened automatically, while leaving others open for
-      // a retry.
-      if result[0]:
-        result[0].close
-        file.close_ stdin
-      if result[1]:
-        result[1].close
-        file.close_ stdout
-      if result[2]:
-        result[2].close
-        file.close_ stderr
+    result[3] = fork_ process_resource_group_ use_path stdin stdout stderr fd_3 fd_4 command (Array_.ensure arguments)
+  if exception:
+    // If an exception is thrown we end up here.  If the fork succeeded then
+    // the pipes would be closed.  Here we have an error and need to close
+    // the pipes that we opened automatically, while leaving others open for
+    // a retry.
+    if result[0]:
+      result[0].close
+      file.close_ stdin
+    if result[1]:
+      result[1].close
+      file.close_ stdout
+    if result[2]:
+      result[2].close
+      file.close_ stderr
+    if (command.index_of " ") != -1:
+      throw "Error trying to run executable with a space in the filename: '$command': $exception"
+    else:
+      clarification := ""
+      if command.size > 0 and command[0] != '/':
+        clarification = use_path ? " using \$PATH" : " not using path"
+      throw "Error trying to run '$command'$clarification: $exception"
+  return result
 
 to command arg1:
   return to [command, arg1]
