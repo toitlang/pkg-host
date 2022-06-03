@@ -21,7 +21,7 @@ test_empty:
   expect_error_parsing "Unknown option --foo" parser ["--foo"]
   expect_error_parsing "Unknown option --foo" parser ["--foo=value"]
   expect_error_parsing "Unknown option --foo" parser ["--foo", "value"]
-  expect_equals "Usage:\ntoit.run argument_parser_test.toit" (parser.usage [])
+  expect_equals "Usage:\nargument_parser_test" (parser.usage --invoked_command="argument_parser_test")
 
 test_command:
   parser := ArgumentParser
@@ -31,16 +31,16 @@ test_command:
   // Usage for whole parser.
   expect_equals """
       Usage:
-      toit.run argument_parser_test.toit sub1
-      toit.run argument_parser_test.toit sub2""" (parser.usage [])
+      argument_parser_test sub1
+      argument_parser_test sub2""" (parser.usage --invoked_command="argument_parser_test")
   // Usage for sub1 subcommand.
   expect_equals """
       Usage:
-      toit.run argument_parser_test.toit sub1""" (parser.usage ["sub1"])
+      argument_parser_test sub1""" (parser.usage ["sub1"] --invoked_command="argument_parser_test")
   // Usage for sub2 subcommand.
   expect_equals """
       Usage:
-      toit.run argument_parser_test.toit sub2""" (parser.usage ["sub2"])
+      argument_parser_test sub2""" (parser.usage ["sub2"] --invoked_command="argument_parser_test")
 
   r := parser.parse ["sub1"]
   expect_equals "sub1" r.command
@@ -75,7 +75,7 @@ test_rest:
 
   expect_equals """
       Usage:
-      toit.run argument_parser_test.toit [--foo=<foo>] [--bar=<bar>]""" (parser.usage [])
+      argument_parser_test [--foo=<foo>] [--bar=<bar>]""" (parser.usage [] --invoked_command="argument_parser_test")
 
   r := parser.parse []
   expect_equals 0 r.rest.size
@@ -129,7 +129,7 @@ test_option:
 
   expect_equals """
       Usage:
-      toit.run argument_parser_test.toit [--x=<x>] [--xy=<xy>] [--a=<a>] [--ab=<ab>] [--verbose|-v] [--foobar|-foo]""" (parser.usage [])
+      argument_parser_test [--x=<x>] [--xy=<xy>] [--a=<a>] [--ab=<ab>] [--verbose|-v] [--foobar|-foo]""" (parser.usage --invoked_command="argument_parser_test")
 
   r := parser.parse []
   expect_null r["x"]
@@ -193,9 +193,9 @@ test_option_alias:
   parser.add_option "evaluate"
   parser.add_alias "evaluate" "e"
 
-  expect_equals """
-      Usage:
-      toit.run argument_parser_test.toit [--flag|-f] [--evaluate|-e=<evaluate>]""" (parser.usage [])
+  expect_equals
+      "Usage:\nargument_parser_test [--flag|-f] [--evaluate|-e=<evaluate>]"
+      parser.usage [] --invoked_command="argument_parser_test"
 
   r := parser.parse ["--evaluate", "123"]
   expect_equals "123" r["evaluate"]
@@ -232,8 +232,8 @@ test_multi_option:
   parser.add_multi_option "multi" --no-split_commas
 
   expect_equals
-      """Usage:\ntoit.run argument_parser_test.toit [--option=<option>]* [--multi=<multi>]*"""
-      parser.usage []
+      "Usage:\nargument_parser_test [--option=<option>]* [--multi=<multi>]*"
+      parser.usage [] --invoked_command="argument_parser_test"
 
   r := parser.parse []
   expect_list_equals [] r["option"]
@@ -273,8 +273,8 @@ two_argument_usage:
   parser.add_flag "flag"
 
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--flag] [--] <foo> <bar>"
-      parser.usage []
+      "Usage:\nargument_parser_test [--flag] [--] <foo> <bar>"
+      parser.usage [] --invoked_command="argument_parser_test"
 
   expect_error_parsing "Too few arguments" parser []
   expect_error_parsing "Too few arguments" parser ["--flag"]
@@ -287,8 +287,8 @@ two_argument_plus_usage:
   parser.add_flag "flag"
 
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--flag] [--] <foo> <bar> ..."
-      parser.usage []
+      "Usage:\nargument_parser_test [--flag] [--] <foo> <bar> ..."
+      parser.usage [] --invoked_command="argument_parser_test"
 
   expect_error_parsing "Too few arguments" parser []
   expect_error_parsing "Too few arguments" parser ["--flag"]
@@ -311,10 +311,12 @@ glob_file_usage:
   expect_equals UNLIMITED parser1.rest_maximum
   expect_equals UNLIMITED parser2.rest_maximum
 
+  parser1_usage := parser1.usage --invoked_command="argument_parser_test"
+  parser2_usage := parser2.usage --invoked_command="argument_parser_test"
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--] <file> ..."
-      parser1.usage []
-  expect_equals parser1.usage parser2.usage
+      "Usage:\nargument_parser_test [--] <file> ..."
+      parser1_usage
+  expect_equals parser1_usage parser2_usage
 
   // Zero or more files:
   parser1 = ArgumentParser
@@ -326,10 +328,12 @@ glob_file_usage:
   expect_equals UNLIMITED parser1.rest_maximum
   expect_equals UNLIMITED parser2.rest_maximum
 
+  parser1_usage = parser1.usage --invoked_command="argument_parser_test"
+  parser2_usage = parser2.usage --invoked_command="argument_parser_test"
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--] [files] ..."
-      parser1.usage []
-  expect_equals parser1.usage parser2.usage
+      "Usage:\nargument_parser_test [--] [files] ..."
+      parser1_usage
+  expect_equals parser1_usage parser2_usage
 
   // Just ... as a rest argument name:
   parser1 = ArgumentParser
@@ -344,16 +348,19 @@ glob_file_usage:
   expect_equals UNLIMITED parser2.rest_maximum
   expect_equals UNLIMITED parser3.rest_maximum
 
+  parser1_usage = parser1.usage --invoked_command="argument_parser_test"
+  parser2_usage = parser2.usage --invoked_command="argument_parser_test"
+  parser3_usage := parser3.usage --invoked_command="argument_parser_test"
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--] ..."
-      parser1.usage []
-  expect_equals parser1.usage parser3.usage
+      "Usage:\nargument_parser_test [--] ..."
+      parser1_usage
+  expect_equals parser1_usage parser3_usage
 
   // For backwards compatibility if you say nothing about the rest arguments we don't
   // pretend to know what they might look like in the usage message.
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit"
-      parser2.usage []
+      "Usage:\nargument_parser_test"
+      parser2.usage [] --invoked_command="argument_parser_test"
 
   // Output-input files, at least one input file.
   parser1 = ArgumentParser
@@ -365,10 +372,12 @@ glob_file_usage:
   expect_equals UNLIMITED parser1.rest_maximum
   expect_equals UNLIMITED parser2.rest_maximum
 
+  parser1_usage = parser1.usage --invoked_command="argument_parser_test"
+  parser2_usage = parser2.usage --invoked_command="argument_parser_test"
   expect_equals
-      "Usage:\ntoit.run argument_parser_test.toit [--] <output-file> <input-files> ..."
-      parser1.usage
-  expect_equals parser1.usage parser2.usage
+      "Usage:\nargument_parser_test [--] <output-file> <input-files> ..."
+      parser1_usage
+  expect_equals parser1_usage parser2_usage
 
   // Unnamed optional arguments just get called [argument].
   parser1 = ArgumentParser
