@@ -19,7 +19,7 @@ class ArgumentParser:
       size--
     return size
 
-  static calculate_maximum_ rest_names -> int:
+  static calculate_maximum_ rest_names/List? -> int:
     if rest_names == null:
       return UNLIMITED
     size := rest_names.size
@@ -83,8 +83,8 @@ class ArgumentParser:
     options_["-$short"] = options_["--$name"]
 
   /**
-  Provide a list of arguments that can be provided after the options.  This list
-    will be used for usage messages.
+  Provides a list of arguments that can be provided after the options.  This
+    list will be used for usage messages.
   $min specifies the minimum number of arguments that must be provided
     after the options.  It defaults to the length of the $names list, or
     zero.  When using the length of the $names to determine default
@@ -92,8 +92,7 @@ class ArgumentParser:
     are trailing arguments that are named "...".
   $max specifies the maximum number of arguments that must be provided
     after the options.  It defaults to the length of the $names list, or
-    $UNLIMITED.  If the last member of the $names list is "..." then there is
-    no maximum by default.
+    $UNLIMITED if the last member of the $names list is "...".
   $usage is a textual description of the rest arguments that can be
     provided.  It defaults to a string constructed from the other arguments.
   */
@@ -109,13 +108,12 @@ class ArgumentParser:
     rest_was_described_ = true
 
   /**
-  Parses the given $arguments. Returns a new instance of $Arguments.
+  Parses the given $arguments.
   If there is an error it prints the error message and the usage
     description on stderr, then exits the VM completely with a non-zero
     exit value.
   The $invoked_command is used only for the usage message in case of an
     error.  It defaults to "toit.run $program_name".
-  Returns a new instance of $Arguments.
   */
   parse arguments --invoked_command="toit.run $program_name" -> Arguments:
     return parse arguments --invoked_command=invoked_command: | error_message usage_string |
@@ -126,14 +124,13 @@ class ArgumentParser:
 
   /**
   Parses the given $arguments.
-  If there is an error in the arguments the block will be called.  If it returns,
-    an exception is thrown.  The arguments to the block are:
+  If there is an error in the arguments the block will be called.  If the block
+    returns, an exception is thrown.  The arguments to the block are:
   `error_message`: the error message.
   `usage_string`: A usage string for the whole parser, or perhaps just the subcommand the user attempted to use.
     This may be a multiline string, but it doesn't have a terminating newline.
   The $invoked_command is used only for the usage message in case of an
     error.  It defaults to "toit.run $program_name".
-  Returns a new instance of $Arguments.
   */
   parse arguments --invoked_command="toit.run $program_name" [error_block] -> Arguments:
     try:
@@ -143,7 +140,6 @@ class ArgumentParser:
         (arguments.size + 1).repeat:
           if it >= arguments.size or not arguments[it].starts_with "-":
             error_block.call exception.value (usage arguments[it..] --invoked_command=invoked_command)
-        throw exception.value
 
   commands_ := {:}
   options_ := {:}
