@@ -12,12 +12,12 @@ pipe_resource_group_ ::= pipe_init_
 standard_pipes_ ::= [ null, null, null ]
 
 // Keep in sync with similar list in event_sources/subprocess.cc.
-PROCESS_EXITED ::= 1
-PROCESS_SIGNALLED ::= 2
-PROCESS_EXIT_CODE_SHIFT ::= 2
-PROCESS_EXIT_CODE_MASK ::= 0xff
-PROCESS_SIGNAL_SHIFT ::= 10
-PROCESS_SIGNAL_MASK ::= 0xff
+PROCESS_EXITED_ ::= 1
+PROCESS_SIGNALLED_ ::= 2
+PROCESS_EXIT_CODE_SHIFT_ ::= 2
+PROCESS_EXIT_CODE_MASK_ ::= 0xff
+PROCESS_SIGNAL_SHIFT_ ::= 10
+PROCESS_SIGNAL_MASK_ ::= 0xff
 
 READ_EVENT_ ::= 1 << 0
 WRITE_EVENT_ ::= 1 << 1
@@ -50,28 +50,44 @@ get_numbered_pipe fd/int:
 class OpenPipe implements reader.Reader:
   resource_ := ?
   state_ := ?
+  pid := null
+  child_process_name_ /string?
+  input_ := null
 
-  fd := -1  // Other end of descriptor, for subprocess.
+  fd := -1  // Other end of descriptor, for child process.
 
-  constructor input/bool:
+  constructor input/bool --child_process_name="child process":
     group := pipe_resource_group_
     pipe_pair := create_pipe_ group input
+    input_ = input
+    child_process_name_ = child_process_name
     resource_ = pipe_pair[0]
     fd = pipe_pair[1]
     state_ = monitor.ResourceState_ pipe_resource_group_ resource_
 
   constructor.from_std_ .resource_:
     group := pipe_resource_group_
+    child_process_name_ = null
     state_ = monitor.ResourceState_ pipe_resource_group_ resource_
 
   read -> ByteArray?:
+    if input_ != false:
+      throw "read from an output pipe"
     while true:
       state_.wait_for_state READ_EVENT_ | CLOSE_EVENT_
       result := read_ resource_
-      if result != -1: return result
+      if result != -1:
+        if result == null:
+          try:
+            check_exit_ pid child_process_name_
+          finally:
+            pid = null
+        return result
       state_.clear_state READ_EVENT_
 
   write x from = 0 to = x.size:
+    if input_ != true:
+      throw "write to an input pipe"
     state_.wait_for_state WRITE_EVENT_ | ERROR_EVENT_
     bytes_written := write_primitive_ resource_ x from to
     if bytes_written == 0: state_.clear_state WRITE_EVENT_
@@ -82,9 +98,25 @@ class OpenPipe implements reader.Reader:
     if state_:
       state_.dispose
       state_ = null
+    if input_:
+      check_exit_ pid child_process_name_
 
   is_a_terminal -> bool:
     return is_a_tty_ resource_
+
+check_exit_ pid child_process_name/string? -> none:
+  if child_process_name == null:
+    child_process_name = "child process"
+  if pid:
+    exit_value := wait_for pid
+    if (exit_value & PROCESS_SIGNALLED_) != 0:
+      // Process crashed.
+      throw
+        "$child_process_name: " +
+          signal_to_string (exit_signal exit_value)
+    code := exit_code exit_value
+    if code != 0:
+      throw "$child_process_name: exited with status $code"
 
 pipe_fd_ resource:
   #primitive.pipe.fd
@@ -107,22 +139,28 @@ close_ pipe:
 close_ pipe resource_group:
   #primitive.pipe.close
 
-// Constants for file descriptors.
-PIPE_INHERITED ::= -1            // Use the stdin/stdout/stderr that the parent Toit process has.
-PIPE_CREATED ::= -2              // Create new pipe and return it.
+/// Use the stdin/stdout/stderr that the parent Toit process has. descriptors.
+PIPE_INHERITED ::= -1
+/// Create new pipe and return it.
+PIPE_CREATED ::= -2
 
 create_pipe_helper_ input_flag index result:
   pipe_ends := OpenPipe input_flag
   result[index] = pipe_ends
   return pipe_ends.fd
 
-// Forks a process and attaches the given pipes to the stdin, stdout and stderr
-// of the new process.  Pipe arguments can be an open file descriptor from the
-// file module or a pipe resource from this pipe module or one of the PIPE_
-// constants above.  Returns an array with [stdin, stdout, stderr, subprocess].
-// To avoid zombies you must either give the subprocess to either dont_wait_for
-// or wait_for.  Optionally you can pass pipes that should be passed to the
-// subprocess as open file descriptors 3 and/or 4.
+/**
+Forks a process.
+Attaches the given pipes to the stdin, stdout and stderr
+  of the new process.  Pipe arguments can be an open file descriptor from the
+  file module or a pipe resource from this pipe module or one of the PIPE_
+  constants above.
+Returns an array with [stdin, stdout, stderr, child process].
+To avoid zombies you must either give the child process to either
+  `dont_wait_for` or `wait_for`.
+Optionally you can pass pipes that should be passed to the
+  child process as open file descriptors 3 and/or 4.
+*/
 fork use_path stdin stdout stderr --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
   result := List 4
   exception := catch:
@@ -170,16 +208,25 @@ to command arg1 arg2 arg3:
 to command arg1 arg2 arg3 arg4:
   return to [command, arg1, arg2, arg3, arg4]
 
-// Fork a program, and return its stdin pipe.  Uses PATH to find the program.
-// Can be passed either a command (with no arguments) as a string, or an array
-// of arguments, where the 0th argument is the command.
+/**
+Forks a program, and return its stdin pipe.
+Uses PATH to find the program.
+Can be passed either a command (with no arguments) as a string, or an array
+  of arguments, where the 0th argument is the command.
+The user of this function is expected to write to the returned writer
+  and then call close on the writer, otherwise the child process will be
+  left running.
+The child process is expected to exit when its stdin is closed.
+The close method on the returned writer will throw an exception if the
+  child process crashes or exits with a non-zero exit code.
+*/
 to arguments:
   if arguments is string:
     return to [arguments]
-  pipe_ends := OpenPipe true
+  pipe_ends := OpenPipe true --child_process_name=arguments[0]
   stdin := pipe_ends.fd
   pipes := fork true stdin PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
-  dont_wait_for pipes[3]
+  pipe_ends.pid = pipes[3]
   return pipe_ends
 
 from command arg1:
@@ -194,16 +241,25 @@ from command arg1 arg2 arg3:
 from command arg1 arg2 arg3 arg4:
   return from [command, arg1, arg2, arg3, arg4]
 
-// Fork a program, and return its stdout pipe.  Uses PATH to find the program.
-// Can be passed either a command (with no arguments) as a string, or an array
-// of arguments, where the 0th argument is the command.
+/**
+Forks a program, and return its stdout pipe.
+Uses PATH to find the program.
+Can be passed either a command (with no arguments) as a string, or an array
+  of arguments, where the 0th argument is the command.
+The user of this function is expected to read the returned reader
+  until it returns null (end of file), otherwise process zombies will
+  be left around.  The end of file value is not returned from read
+  until the child process exits.
+The read method on the reader throws an exception if the process crashes or
+  has a non-zero exit code.
+*/
 from arguments:
   if arguments is string:
     return from [arguments]
-  pipe_ends := OpenPipe false
+  pipe_ends := OpenPipe false --child_process_name=arguments[0]
   stdout := pipe_ends.fd
   pipes := fork true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
-  dont_wait_for pipes[3]
+  pipe_ends.pid = pipes[3]
   return pipe_ends
 
 backticks command arg1:
@@ -218,30 +274,28 @@ backticks command arg1 arg2 arg3:
 backticks command arg1 arg2 arg3 arg4:
   return backticks [command, arg1, arg2, arg3, arg4]
 
-// Fork a program, and return the output from its stdout.  Uses PATH to find
-// the program.  Can be passed either a command (with no arguments) as a
-// string, or an array of arguments, where the 0th argument is the command.
-// Throws an exception if the program exits with a signal or a non-zero
-// exit value.
+/**
+Fork a program, and return the output from its stdout.
+Uses PATH to find the program.
+Can be passed either a command (with no arguments) as a
+  string, or an array of arguments, where the 0th argument is the command.
+Throws an exception if the program exits with a signal or a non-zero
+  exit value.
+*/
 backticks arguments:
   if arguments is string:
     return backticks [arguments]
   pipe_ends := OpenPipe false
   stdout := pipe_ends.fd
   pipes := fork true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
-  subprocess := pipes[3]
+  child_process := pipes[3]
   reader := reader.BufferedReader pipe_ends
   reader.buffer_all
   output := reader.read_string (reader.buffered)
-  exit_value := wait_for subprocess
-  pipe_ends.close
-  if (exit_value & PROCESS_SIGNALLED) != 0:
-    // Process crashed.
-    throw
-      "$arguments[0]: " +
-        signal_to_string (exit_value >> PROCESS_SIGNAL_SHIFT) & PROCESS_SIGNAL_MASK
-  exit_code := (exit_value >> PROCESS_EXIT_CODE_SHIFT) & PROCESS_EXIT_CODE_MASK
-  if exit_code != 0: throw "$arguments[0]: exit code $exit_code"
+  try:
+    check_exit_ child_process arguments[0]
+  finally:
+    catch: pipe_ends.close
   return output
 
 /**
@@ -250,20 +304,24 @@ Returns the exit value of the process which can then be decoded into
 
 See $exit_code and $exit_signal.
 */
-wait_for subprocess:
-  wait_for_ subprocess
-  state := monitor.ResourceState_ process_resource_group_ subprocess
+wait_for child_process:
+  wait_for_ child_process
+  state := monitor.ResourceState_ process_resource_group_ child_process
   exit_value := state.wait
   state.dispose
   return exit_value
 
-// Fork a program, and return the exit status.  Zero indicates the program
-// ran without errors.  Uses the /bin/sh shell to parse the command, which
-// is one string.  Arguments are split by the shell at unescaped whitespace.
-// Throws an exception if the shell cannot be run, but otherwise returns the
-// exit value of shell, which is the exit value of the program it ran.  If the
-// program run by the shell dies with a signal then the exit value is 128 + the
-// signal number.
+/**
+Forks a program, and returns the exit status.
+A return value of zero indicates the program ran without errors.
+Uses the /bin/sh shell to parse the command, which
+  is a single string.
+Arguments are split by the shell at unescaped whitespace.
+Throws an exception if the shell cannot be run, but otherwise returns the
+  exit value of shell, which is the exit value of the program it ran.
+If the program run by the shell dies with a signal then the exit value is 128 +
+  the signal number.
+*/
 system command:
   return run_program ["/bin/sh", "-c", command]
 
@@ -279,23 +337,26 @@ run_program command arg1 arg2 arg3:
 run_program command arg1 arg2 arg3 arg4:
   return run_program [command, arg1, arg2, arg3, arg4]
 
-// Fork a program, and return the exit status.  Zero indicates the program
-// ran without errors.  Can be passed either a command (with no arguments) as a
-// string, or an array of arguments, where the 0th argument is the command.
-// Throws an exception if the command cannot be run or if the command exits
-// with a signal, but otherwise returns the exit value of the program.
+/**
+Forks a program, and returns the exit status.
+A return value of zero indicates the program ran without errors.
+Can be passed either a command (with no arguments) as a
+  string, or an array of arguments, where the 0th argument is the command.
+Throws an exception if the command cannot be run or if the command exits
+  with a signal, but otherwise returns the exit value of the program.
+*/
 run_program arguments:
   if arguments is string:
     return run_program [arguments]
   pipes := fork true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
-  subprocess := pipes[3]
-  exit_value := wait_for subprocess
-  if (exit_value & PROCESS_SIGNALLED) != 0:
-    // Process crashed.
+  child_process := pipes[3]
+  exit_value := wait_for child_process
+  signal := exit_signal exit_value
+  if signal:
     throw
       "$arguments[0]: " +
-        signal_to_string (exit_value >> PROCESS_SIGNAL_SHIFT) & PROCESS_SIGNAL_MASK
-  return (exit_value >> PROCESS_EXIT_CODE_SHIFT) & PROCESS_EXIT_CODE_MASK
+        signal_to_string signal
+  return exit_code exit_value
 
 stdin:
   return get_standard_pipe_ 0
@@ -320,8 +381,8 @@ Returns null if the process exited due to an uncaught signal. Use $exit_signal
   in that case.
 */
 exit_code exit_value/int -> int?:
-  if (exit_value & PROCESS_SIGNALLED) != 0: return null
-  return (exit_value >> PROCESS_EXIT_CODE_SHIFT) & PROCESS_EXIT_CODE_MASK
+  if (exit_value & PROCESS_SIGNALLED_) != 0: return null
+  return (exit_value >> PROCESS_EXIT_CODE_SHIFT_) & PROCESS_EXIT_CODE_MASK_
 
 /**
 Decodes the exit value (of $wait_for) and returns the exit signal.
@@ -332,8 +393,8 @@ Returns null if the process exited normally with an exit code, and not
 Use $signal_to_string to convert the signal to a string.
 */
 exit_signal exit_value/int -> int?:
-  if (exit_value & PROCESS_SIGNALLED) == 0: return null
-  return (exit_value >> PROCESS_SIGNAL_SHIFT) & PROCESS_SIGNAL_MASK
+  if (exit_value & PROCESS_SIGNALLED_) == 0: return null
+  return (exit_value >> PROCESS_SIGNAL_SHIFT_) & PROCESS_SIGNAL_MASK_
 
 // Temporary method, until printing to stdout is easier without allocating a `Writer`.
 print_to_ pipe msg/string:
