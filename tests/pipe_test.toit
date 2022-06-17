@@ -115,8 +115,9 @@ main:
   expect_error "shasum: exited with status 1":
     sum := pipe.backticks "shasum" "file_that_doesn't exist"
 
-  expect_error "tar: exited with status 2":
-    p := pipe.to "tar" "-xvf" "-"
+  tar_exit_code := (platform == "Linux") ? 2 : 1
+  expect_error "tar: exited with status $tar_exit_code":
+    p := pipe.to "tar" "-xvf" "-" "foo.txt"
     p.close  // Close without sending a valid tar file.
 
   task:: long_running_sleep
