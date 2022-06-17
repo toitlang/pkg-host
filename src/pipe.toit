@@ -24,6 +24,11 @@ WRITE_EVENT_ ::= 1 << 1
 CLOSE_EVENT_ ::= 1 << 2
 ERROR_EVENT_ ::= 1 << 3
 
+UNKNOWN_DIRECTION_ ::= 0
+PARENT_TO_CHILD_ ::= 1
+CHILD_TO_PARENT_ ::= 2
+
+
 get_standard_pipe_ fd/int:
   if not standard_pipes_[fd]:
     if file.is_open_file_ fd:
@@ -52,14 +57,14 @@ class OpenPipe implements reader.Reader:
   state_ := ?
   pid := null
   child_process_name_ /string?
-  input_ := null
+  input_ /int := UNKNOWN_DIRECTION_
 
   fd := -1  // Other end of descriptor, for child process.
 
   constructor input/bool --child_process_name="child process":
     group := pipe_resource_group_
     pipe_pair := create_pipe_ group input
-    input_ = input
+    input_ = input ? PARENT_TO_CHILD_ : CHILD_TO_PARENT_
     child_process_name_ = child_process_name
     resource_ = pipe_pair[0]
     fd = pipe_pair[1]
@@ -71,7 +76,7 @@ class OpenPipe implements reader.Reader:
     state_ = monitor.ResourceState_ pipe_resource_group_ resource_
 
   read -> ByteArray?:
-    if input_ != false:
+    if input_ == PARENT_TO_CHILD_:
       throw "read from an output pipe"
     while true:
       state_.wait_for_state READ_EVENT_ | CLOSE_EVENT_
@@ -86,7 +91,7 @@ class OpenPipe implements reader.Reader:
       state_.clear_state READ_EVENT_
 
   write x from = 0 to = x.size:
-    if input_ != true:
+    if input_ == CHILD_TO_PARENT_:
       throw "write to an input pipe"
     state_.wait_for_state WRITE_EVENT_ | ERROR_EVENT_
     bytes_written := write_primitive_ resource_ x from to
@@ -98,7 +103,7 @@ class OpenPipe implements reader.Reader:
     if state_:
       state_.dispose
       state_ = null
-    if input_:
+    if input_ == PARENT_TO_CHILD_:
       check_exit_ pid child_process_name_
 
   is_a_terminal -> bool:
@@ -139,7 +144,7 @@ close_ pipe:
 close_ pipe resource_group:
   #primitive.pipe.close
 
-/// Use the stdin/stdout/stderr that the parent Toit process has. descriptors.
+/// Use the stdin/stdout/stderr that the parent Toit process has.
 PIPE_INHERITED ::= -1
 /// Create new pipe and return it.
 PIPE_CREATED ::= -2
@@ -209,13 +214,12 @@ to command arg1 arg2 arg3 arg4:
   return to [command, arg1, arg2, arg3, arg4]
 
 /**
-Forks a program, and return its stdin pipe.
+Forks a program, and returns its stdin pipe.
 Uses PATH to find the program.
 Can be passed either a command (with no arguments) as a string, or an array
   of arguments, where the 0th argument is the command.
-The user of this function is expected to write to the returned writer
-  and then call close on the writer, otherwise the child process will be
-  left running.
+The user of this function is expected to eventually call close on the writer,
+  otherwise the child process will be left running.
 The child process is expected to exit when its stdin is closed.
 The close method on the returned writer will throw an exception if the
   child process crashes or exits with a non-zero exit code.
@@ -275,7 +279,7 @@ backticks command arg1 arg2 arg3 arg4:
   return backticks [command, arg1, arg2, arg3, arg4]
 
 /**
-Fork a program, and return the output from its stdout.
+Forks a program, and return the output from its stdout.
 Uses PATH to find the program.
 Can be passed either a command (with no arguments) as a
   string, or an array of arguments, where the 0th argument is the command.
@@ -314,8 +318,7 @@ wait_for child_process:
 /**
 Forks a program, and returns the exit status.
 A return value of zero indicates the program ran without errors.
-Uses the /bin/sh shell to parse the command, which
-  is a single string.
+Uses the /bin/sh shell to parse the command, which is a single string.
 Arguments are split by the shell at unescaped whitespace.
 Throws an exception if the shell cannot be run, but otherwise returns the
   exit value of shell, which is the exit value of the program it ran.
