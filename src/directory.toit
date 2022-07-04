@@ -50,9 +50,10 @@ mkdir --recursive/bool path/string mode/int=0x1ff -> none:
   parts := path.split "/"
   parts.size.repeat:
     part := parts[it]
-    built_path += "$part/"
-    if not file.is_directory built_path:
+    built_path += "$part"
+    if part != "" and not file.is_directory built_path:
       mkdir built_path mode
+    built_path += "/"
 
 /**
 Creates a fresh directory with the given prefix.
