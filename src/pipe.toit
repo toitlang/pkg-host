@@ -266,16 +266,16 @@ from arguments:
   pipe_ends.pid = pipes[3]
   return pipe_ends
 
-backticks command arg1:
+backticks command arg1 -> string:
   return backticks [command, arg1]
 
-backticks command arg1 arg2:
+backticks command arg1 arg2 -> string:
   return backticks [command, arg1, arg2]
 
-backticks command arg1 arg2 arg3:
+backticks command arg1 arg2 arg3 -> string:
   return backticks [command, arg1, arg2, arg3]
 
-backticks command arg1 arg2 arg3 arg4:
+backticks command arg1 arg2 arg3 arg4 -> string:
   return backticks [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -286,7 +286,7 @@ Can be passed either a command (with no arguments) as a
 Throws an exception if the program exits with a signal or a non-zero
   exit value.
 */
-backticks arguments:
+backticks arguments -> string:
   if arguments is string:
     return backticks [arguments]
   pipe_ends := OpenPipe false
@@ -325,19 +325,19 @@ Throws an exception if the shell cannot be run, but otherwise returns the
 If the program run by the shell dies with a signal then the exit value is 128 +
   the signal number.
 */
-system command:
+system command -> int?:
   return run_program ["/bin/sh", "-c", command]
 
-run_program command arg1:
+run_program command arg1 -> int?:
   return run_program [command, arg1]
 
-run_program command arg1 arg2:
+run_program command arg1 arg2 -> int?:
   return run_program [command, arg1, arg2]
 
-run_program command arg1 arg2 arg3:
+run_program command arg1 arg2 arg3 -> int?:
   return run_program [command, arg1, arg2, arg3]
 
-run_program command arg1 arg2 arg3 arg4:
+run_program command arg1 arg2 arg3 arg4 -> int?:
   return run_program [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -348,7 +348,7 @@ Can be passed either a command (with no arguments) as a
 Throws an exception if the command cannot be run or if the command exits
   with a signal, but otherwise returns the exit value of the program.
 */
-run_program arguments:
+run_program arguments -> int:
   if arguments is string:
     return run_program [arguments]
   pipes := fork true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
