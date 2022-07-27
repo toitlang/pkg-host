@@ -348,7 +348,7 @@ Can be passed either a command (with no arguments) as a
 Throws an exception if the command cannot be run or if the command exits
   with a signal, but otherwise returns the exit value of the program.
 */
-run_program arguments -> int?:
+run_program arguments -> int:
   if arguments is string:
     return run_program [arguments]
   pipes := fork true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
