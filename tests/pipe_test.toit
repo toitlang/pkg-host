@@ -23,6 +23,9 @@ main:
   // This test does not work on ESP32 since you can't launch subprocesses.
   if platform == "FreeRTOS": return
 
+  print " ** Some child processes will print errors on stderr during **"
+  print " ** this test.  This is harmless and expected.              **"
+
   pipe_large_file
   write_closed_stdin_exception
 
@@ -61,10 +64,6 @@ main:
     "/bin/sh\n"
     pipe.backticks "ls" "/bin/sh"
 
-  // This test does not work on ESP32 since it uses Posix fork, exec and pipe
-  // calls.
-  if platform == "FreeRTOS": return
-
   no_exist_cmd := "a program name that does not exist"
   expect_file_not_found no_exist_cmd : pipe.to no_exist_cmd
 
@@ -77,17 +76,17 @@ main:
     dirname := "testdir"
 
     mkdir dirname
+    go_up := false
 
     try:
       p := pipe.to "sh" "-c" "tr A-Z a-z > $dirname/$filename"
       p.write "The contents of the file"
       p.close
 
-      sleep --ms=1000  // Allow program to run - TODO add API to detect when it exits.
-
       expect (file.size "$dirname/$filename") != null
 
       chdir dirname
+      go_up = true
 
       p = pipe.from "shasum" filename
       output := ""
@@ -97,13 +96,29 @@ main:
       expect output == "2dcc8e172c72f3d6937d49be7cf281067d257a62  $filename\n"
 
       chdir ".."
-      file.delete "$dirname/$filename"
+      go_up = false
 
     finally:
+      if go_up:
+        chdir ".."
+      file.delete "$dirname/$filename"
       rmdir dirname
 
   finally:
     rmdir --recursive tmpdir
+
+  expect_error "shasum: exited with status 1":
+    p := pipe.from "shasum" "file_that_doesn't exist"
+    while p.read:
+      // nothing
+
+  expect_error "shasum: exited with status 1":
+    sum := pipe.backticks "shasum" "file_that_doesn't exist"
+
+  tar_exit_code := (platform == "Linux") ? 2 : 1
+  expect_error "tar: exited with status $tar_exit_code":
+    p := pipe.to "tar" "-xvf" "-" "foo.txt"
+    p.close  // Close without sending a valid tar file.
 
   task:: long_running_sleep
 
