@@ -113,9 +113,9 @@ class ArgumentParser:
     description on stderr, then exits the VM completely with a non-zero
     exit value.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to "toit.run $program_name".
+    error.  It defaults to $program_name.
   */
-  parse arguments --invoked_command="toit.run $program_name" -> Arguments:
+  parse arguments --invoked_command=program_name -> Arguments:
     return parse arguments --invoked_command=invoked_command: | error_message usage_string |
       print_on_stderr_ "$error_message"
       print_on_stderr_
@@ -130,9 +130,9 @@ class ArgumentParser:
   `usage_string`: A usage string for the whole parser, or perhaps just the subcommand the user attempted to use.
     This may be a multiline string, but it doesn't have a terminating newline.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to "toit.run $program_name".
+    error.  It defaults to $program_name.
   */
-  parse arguments --invoked_command="toit.run $program_name" [error_block] -> Arguments:
+  parse arguments --invoked_command=program_name [error_block] -> Arguments:
     try:
       return parse_ this null arguments 0
     finally: | is_exception exception |
@@ -152,9 +152,9 @@ class ArgumentParser:
   Provides a usage guide for the user.  The arguments list is
     used to limit usage to a subcommand if any.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to "toit.run $program_name".
+    error.  It defaults to $program_name.
   */
-  usage arguments/List=[] --invoked_command="toit.run $program_name" -> string:
+  usage arguments/List=[] --invoked_command=program_name -> string:
     result := "Usage:"
     prefix := "$invoked_command "
     parser := this
