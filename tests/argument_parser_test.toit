@@ -8,6 +8,7 @@ import host.arguments show ArgumentParser UNLIMITED
 
 main:
   test_empty
+  test_top_level_options
   test_command
   test_rest
   test_option
@@ -22,6 +23,52 @@ test_empty:
   expect_error_parsing "Unknown option --foo" parser ["--foo=value"]
   expect_error_parsing "Unknown option --foo" parser ["--foo", "value"]
   expect_equals "Usage:\nargument_parser_test" (parser.usage --invoked_command="argument_parser_test")
+
+test_top_level_options:
+  parser := ArgumentParser
+  parser.add_option "foo" --short="f" --default="bar"
+  sub := parser.add_command "sub1"
+  sub.add_flag "frobinate"
+  r := parser.parse ["sub1"]
+  expect_equals "bar" r["foo"]
+  // Long form of top level option.
+  r = parser.parse ["--foo=x", "sub1"]
+  expect_equals "x" r["foo"]
+  expect_equals false r["frobinate"]
+  // Long form of top level option, also level two flag.
+  r = parser.parse ["--foo=x", "sub1", "--frobinate"]
+  expect_equals "x" r["foo"]
+  expect_equals true r["frobinate"]
+  // Long form of top level option with space instead of "=".
+  r = parser.parse ["--foo", "x", "sub1", "--frobinate"]
+  expect_equals "x" r["foo"]
+  expect_equals true r["frobinate"]
+  // Short form of top level option, doesn't use "=".
+  r = parser.parse ["-fx", "sub1", "--frobinate"]
+  expect_equals "x" r["foo"]
+  expect_equals true r["frobinate"]
+  // Usage message.
+  expect_equals """
+      Usage:
+      argument_parser_test [-f|--foo=<foo>] sub1 [--frobinate]"""
+      (parser.usage --invoked_command="argument_parser_test")
+
+  // With top-level flag instead of option.
+  parser = ArgumentParser
+  parser.add_flag "foo" --short="f"
+  sub = parser.add_command "sub1"
+  sub.add_flag "frobinate"
+  r = parser.parse ["sub1"]
+  expect_equals false r["foo"]
+  // Long form of top level option.
+  r = parser.parse ["--foo", "sub1"]
+  expect_equals true r["foo"]
+  expect_equals false r["frobinate"]
+  // Usage message.
+  expect_equals """
+      Usage:
+      argument_parser_test [-f|--foo] sub1 [--frobinate]"""
+      (parser.usage --invoked_command="argument_parser_test")
 
 test_command:
   parser := ArgumentParser
@@ -129,7 +176,7 @@ test_option:
 
   expect_equals """
       Usage:
-      argument_parser_test [--x=<x>] [--xy=<xy>] [--a=<a>] [--ab=<ab>] [--verbose|-v] [--foobar|-foo]""" (parser.usage --invoked_command="argument_parser_test")
+      argument_parser_test [--x=<x>] [--xy=<xy>] [--a=<a>] [--ab=<ab>] [-v|--verbose] [-foo|--foobar]""" (parser.usage --invoked_command="argument_parser_test")
 
   r := parser.parse []
   expect_null r["x"]
@@ -194,7 +241,7 @@ test_option_alias:
   parser.add_alias "evaluate" "e"
 
   expect_equals
-      "Usage:\nargument_parser_test [--flag|-f] [--evaluate|-e=<evaluate>]"
+      "Usage:\nargument_parser_test [-f|--flag] [-e|--evaluate=<evaluate>]"
       parser.usage [] --invoked_command="argument_parser_test"
 
   r := parser.parse ["--evaluate", "123"]
