@@ -31,22 +31,32 @@ test_top_level_options:
   sub.add_flag "frobinate"
   r := parser.parse ["sub1"]
   expect_equals "bar" r["foo"]
+  expect_equals "sub1" r.command
   // Long form of top level option.
   r = parser.parse ["--foo=x", "sub1"]
   expect_equals "x" r["foo"]
   expect_equals false r["frobinate"]
+  expect_equals "sub1" r.command
   // Long form of top level option, also level two flag.
   r = parser.parse ["--foo=x", "sub1", "--frobinate"]
   expect_equals "x" r["foo"]
   expect_equals true r["frobinate"]
+  expect_equals "sub1" r.command
   // Long form of top level option with space instead of "=".
   r = parser.parse ["--foo", "x", "sub1", "--frobinate"]
   expect_equals "x" r["foo"]
   expect_equals true r["frobinate"]
+  expect_equals "sub1" r.command
+  // Short form of top level option with space.
+  r = parser.parse ["-f", "x", "sub1", "--frobinate"]
+  expect_equals "x" r["foo"]
+  expect_equals true r["frobinate"]
+  expect_equals "sub1" r.command
   // Short form of top level option, doesn't use "=".
   r = parser.parse ["-fx", "sub1", "--frobinate"]
   expect_equals "x" r["foo"]
   expect_equals true r["frobinate"]
+  expect_equals "sub1" r.command
   // Usage message.
   expect_equals """
       Usage:
