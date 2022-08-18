@@ -181,7 +181,7 @@ class ArgumentParser:
         display_name := name
         options_.do: | shortname shortoption |
           if shortname != name and shortoption == option:
-            display_name = "$display_name|$shortname"
+            display_name = "$shortname|$display_name"
         if option.is_flag:
           prefix = "$(prefix)[$display_name] "
         else:
@@ -228,26 +228,22 @@ class Arguments:
 // ----------------------------------------------------------------------------
 
 // Argument parsing functionality.
-parse_ grammar command arguments index:
-  if not command and index < arguments.size:
-    first := arguments[index]
-    grammar.commands_.get first --if_present=:
-      sub := it
-      return parse_ sub first arguments index + 1
-
+parse_ grammar/ArgumentParser command/String? arguments/List index/int --options={:}:
   // Populate the options from the default values or empty lists (for multi-options)
-  options := {:}
   rest := []
-  grammar.options_.do --values:
-    if it.is_multi_option:
-      options[it.name] = []
-    else:
-      options[it.name] = it.default
+  grammar.options_.do --values: | option |
+    options.get option.name --init=:
+      option.is_multi_option ? [] : option.default
 
   seen_options := {}
 
   while index < arguments.size:
     argument := arguments[index]
+
+    if not command and rest.size == 0 and index < arguments.size:
+      grammar.commands_.get argument --if_present=: | sub |
+        return parse_ sub argument arguments index + 1 --options=options
+
     if argument == "--":
       for i := index + 1; i < arguments.size; i++: rest.add arguments[i]
       break  // We're done!
