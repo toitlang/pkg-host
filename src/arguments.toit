@@ -228,7 +228,7 @@ class Arguments:
 // ----------------------------------------------------------------------------
 
 // Argument parsing functionality.
-parse_ grammar command arguments index --options={:}:
+parse_ grammar/ArgumentParser command/String? arguments/List index/int --options={:}:
   // Populate the options from the default values or empty lists (for multi-options)
   rest := []
   grammar.options_.do --values: | option |
@@ -240,9 +240,8 @@ parse_ grammar command arguments index --options={:}:
   while index < arguments.size:
     argument := arguments[index]
 
-    if not command and index < arguments.size:
-      grammar.commands_.get argument --if_present=:
-        sub := it
+    if not command and rest.size == 0 and index < arguments.size:
+      grammar.commands_.get argument --if_present=: | sub |
         return parse_ sub argument arguments index + 1 --options=options
 
     if argument == "--":
