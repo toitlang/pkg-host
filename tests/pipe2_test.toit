@@ -52,6 +52,14 @@ test_exit_signal sleep_time/int:
   expect_equals null (pipe.exit_code exit_value)
   expect_equals SIGKILL (pipe.exit_signal exit_value)
 
+test_std:
+  pipe.stdout
+  pipe.stderr
+  pipe.stdin
+
+  pipe.stdout.write "Write to stdout\n"
+  pipe.stderr.write "Write to stderr\n"
+
 main:
   // This test does not work on ESP32 since you can't launch subprocesses.
   if platform == "FreeRTOS": return
@@ -64,3 +72,5 @@ main:
 
   test_exit_signal 0
   test_exit_signal 20
+
+  test_std
