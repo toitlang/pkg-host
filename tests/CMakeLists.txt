@@ -36,21 +36,21 @@ foreach(file ${TESTS})
   if("${test_name}" IN_LIST SKIP_TESTS)
     continue()
   endif()
+
   add_test(
     NAME "${test_name}"
     COMMAND "${TOIT_EXEC}" "${file}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+  )
+
   if ("${file}" MATCHES "slow.toit")
     set_tests_properties(${test_name} PROPERTIES TIMEOUT ${SLOW_TEST_TIMEOUT})
   else()
     set_tests_properties(${test_name} PROPERTIES TIMEOUT ${TEST_TIMEOUT})
   endif()
-endforeach()
 
-foreach(test ${FAILING_TESTS})
-  if("${test}" IN_LIST SKIP_TESTS)
-    continue()
+  if ("${test_name}" IN_LIST FAILING_TESTS)
+    set_tests_properties("${test}" PROPERTIES WILL_FAIL TRUE)
   endif()
-  set_tests_properties("${test}" PROPERTIES WILL_FAIL TRUE)
+
 endforeach()
