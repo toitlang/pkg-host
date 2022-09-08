@@ -50,7 +50,7 @@ foreach(file ${TESTS})
   endif()
 
   if ("${test_name}" IN_LIST FAILING_TESTS)
-    set_tests_properties("${test}" PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties("${test_name}" PROPERTIES WILL_FAIL TRUE)
   endif()
 
 endforeach()
