@@ -87,7 +87,13 @@ class DirectoryStream:
   dir_ := ?
 
   constructor name:
-    dir_ = opendir_ resource_freeing_module_ name
+    dir_ = null
+    error := catch:
+      dir_ = opendir_ resource_freeing_module_ name
+    if error:
+      if error is string:
+        throw "$error: \"$name\""
+      throw error
 
   /**
   Returns a string with the next name from the directory.

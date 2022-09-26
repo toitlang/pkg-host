@@ -62,7 +62,13 @@ class Stream implements Reader:
 
   // Returns an open file.  Only for use on actual files, not pipes, devices, etc.
   constructor name flags permissions:
-    fd := open_ name flags permissions
+    fd := null
+    error := catch:
+      fd = open_ name flags permissions
+    if error:
+      if error is string:
+        throw "$error: \"$name\""
+      throw error
     return Stream.internal_ fd
 
   // Reads some data from the file, returning a byte array.  Returns null on
