@@ -9,9 +9,8 @@ import host.directory show *
 import writer show Writer
 
 expect_ name [code]:
-  expect_equals
-    name
-    catch code
+  expect
+    (catch code).starts_with name
 
 expect_out_of_bounds [code]:
   expect_ "OUT_OF_BOUNDS" code
