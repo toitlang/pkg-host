@@ -111,6 +111,28 @@ main:
 
       expect (not file.size filename)
 
+      try:
+        file.write_content test_contents --path=filename
+        read_back := (file.read_content filename).to_string
+        expect_equals test_contents read_back
+      finally:
+        file.delete filename
+
+      expect (not file.size filename)
+
+      try:
+        file.write_content test_contents --path=filename --permissions=(6 << 6)
+        read_back := (file.read_content filename).to_string
+        expect_equals test_contents read_back
+        stats := file.stat filename
+        // We can't require that the permissions are exactly the same (as the umask
+        // might clear some bits).
+        expect_equals (6 << 6) ((6 << 6) | stats[file.ST_MODE])
+      finally:
+        file.delete filename
+
+      expect (not file.size filename)
+
       cwd_path := cwd
 
       chdir dirname
