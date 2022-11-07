@@ -130,7 +130,6 @@ main:
 
   if platform == PLATFORM_WINDOWS:
     expect_error "certutil: exited with status 2":
-      print cwd
       p := pipe.from "certutil" "file_that_doesn't exist"
       while p.read:
         // nothing
