@@ -326,7 +326,10 @@ If the program run by the shell dies with a signal then the exit value is 128 +
   the signal number.
 */
 system command -> int?:
-  return run_program ["/bin/sh", "-c", command]
+  if platform == PLATFORM_WINDOWS:
+    return run_program ["cmd", "/s", "/c",  command]
+  else:
+    return run_program ["/bin/sh", "-c", command]
 
 run_program command arg1 -> int?:
   return run_program [command, arg1]
