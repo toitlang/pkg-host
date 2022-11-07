@@ -129,7 +129,7 @@ same_entry_ a b:
 // Get the canonical version of a file path, removing . and .. and resolving
 // symbolic links.  Returns null if the path does not exist, but may throw on
 // other errors such as symlink loops.
-realpath path/string:
+realpath path:
   if path is not string: throw "WRONG_TYPE"
   if path == "": throw "NO_SUCH_FILE"
   // Relative paths must be prepended with the current directory, and we can't
