@@ -135,7 +135,11 @@ realpath path:
   // Relative paths must be prepended with the current directory, and we can't
   // let the C realpath routine do that for us, because it doesn't understand
   // what our current directory is.
-  if not path.starts_with "/": path = "$cwd/$path"
+  if platform == PLATFORM_WINDOWS:
+    if not path.starts_with "\\" or path.size <= 2 or path[1..2] != ":\\":
+      path = "$cwd\\$path"
+  else:
+    if not path.starts_with "/": path = "$cwd/$path"
   #primitive.file.realpath
 
 // Get the current working directory.  Like the 'pwd' command, this works by

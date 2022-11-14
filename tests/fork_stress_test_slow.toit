@@ -6,6 +6,7 @@ import host.pipe
 import reader show BufferedReader
 import monitor
 import expect show *
+import writer show Writer
 
 class Stress:
   executable ::= ?
@@ -29,11 +30,12 @@ class Stress:
     pipe.dont_wait_for pid
     channel.send "$id: forked"
 
+    pipe_writer := Writer to
     // Stress pipes.
     LINES_COUNT ::= 500
     for i := 0; i < LINES_COUNT; i++:
-      to.write "line$i\n"
-    to.close
+      pipe_writer.write "line$i\n"
+    pipe_writer.close
 
     reader := BufferedReader from
     read_counter := 0
@@ -51,7 +53,7 @@ class Stress:
 logs := []
 
 main:
-  stress := Stress "/bin/cat"
+  stress := Stress "cat"
 
   now_us := Time.monotonic_us
   counter := 0

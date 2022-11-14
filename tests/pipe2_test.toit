@@ -37,8 +37,8 @@ test_exit_signal sleep_time/int:
     pipe.PIPE_CREATED  // stdin
     pipe.PIPE_CREATED  // stdiout
     pipe.PIPE_CREATED  // stderr
-    "/bin/cat"
-    ["/bin/cat"]
+    "cat"
+    ["cat"]
 
   pid := pipes[3]
 

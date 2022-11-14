@@ -32,13 +32,14 @@ main:
   expect_file_not_found: file.Stream "mkfxz.not_there" file.RDONLY
   expect_invalid_argument: file.Stream "any name" file.CREAT       // Can't create a file without permissions.
 
-  open_file := file.Stream.for_read "/dev/null"
+  nul_device := (platform == PLATFORM_WINDOWS ? "\\\\.\\NUL" : "/dev/null")
+  open_file := file.Stream.for_read nul_device
   byte_array := open_file.read
   expect (not byte_array)
   open_file.close
   expect_already_closed: open_file.close
 
-  open_file = file.Stream "/dev/null" file.RDONLY
+  open_file = file.Stream nul_device file.RDONLY
   byte_array = open_file.read
   expect (not byte_array)
   open_file.close
@@ -69,7 +70,7 @@ main:
         test_out.write test_contents
         test_out.close
 
-        for i := 0; i < 10000; i++:
+        10000.repeat:
           file.read_content filename
 
         read_back := (file.read_content filename).to_string
@@ -120,28 +121,31 @@ main:
 
       expect (not file.size filename)
 
-      try:
-        file.write_content test_contents --path=filename --permissions=(6 << 6)
-        read_back := (file.read_content filename).to_string
-        expect_equals test_contents read_back
-        stats := file.stat filename
-        // We can't require that the permissions are exactly the same (as the umask
-        // might clear some bits).
-        expect_equals (6 << 6) ((6 << 6) | stats[file.ST_MODE])
-      finally:
-        file.delete filename
+      // Permissions does not quite work on windows
+      if platform != PLATFORM_WINDOWS:
+        try:
+          file.write_content test_contents --path=filename --permissions=(6 << 6)
+          read_back := (file.read_content filename).to_string
+          expect_equals test_contents read_back
+          stats := file.stat filename
+          // We can't require that the permissions are exactly the same (as the umask
+          // might clear some bits).
+          expect_equals (6 << 6) ((6 << 6) | stats[file.ST_MODE])
+        finally:
+          file.delete filename
 
       expect (not file.size filename)
 
       cwd_path := cwd
 
+      path_sep := platform == PLATFORM_WINDOWS ? "\\" : "/"
+
       chdir dirname
+      expect_equals "$cwd_path$path_sep$dirname" cwd
 
-      expect_equals "$cwd_path/$dirname" cwd
-
-      expect_equals "$cwd_path/$dirname" (realpath ".")
+      expect_equals "$cwd_path$path_sep$dirname" (realpath ".")
       expect_equals "$cwd_path" (realpath "..")
-      expect_equals "$cwd_path/$dirname" (realpath "../$dirname")
+      expect_equals "$cwd_path$path_sep$dirname" (realpath "../$dirname")
       expect_equals "$cwd_path" (realpath "../$dirname/..")
       expect_equals null (realpath "fætter");
 

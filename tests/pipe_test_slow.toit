@@ -15,17 +15,26 @@ expect_error name [code]:
 
 expect_file_not_found cmd [code]:
   if (cmd.index_of " ") == -1:
-    expect_error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
+    if platform == PLATFORM_WINDOWS:
+      expect_error "Error trying to run '$cmd' using \$PATH: FILE_NOT_FOUND" code
+    else:
+      expect_error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
   else:
-    expect_error "Error trying to run executable with a space in the filename: '$cmd': No such file or directory" code
+    if platform == PLATFORM_WINDOWS:
+      expect_error "Error trying to run executable with a space in the filename: '$cmd': FILE_NOT_FOUND" code
+    else:
+      expect_error "Error trying to run executable with a space in the filename: '$cmd': No such file or directory" code
+
+if_windows windows unix:
+  if platform == PLATFORM_WINDOWS: return windows
+  return unix
 
 main:
   // This test does not work on ESP32 since you can't launch subprocesses.
-  if platform == "FreeRTOS": return
+  if platform == PLATFORM_FREERTOS: return
 
   print " ** Some child processes will print errors on stderr during **"
   print " ** this test.  This is harmless and expected.              **"
-
   pipe_large_file
   write_closed_stdin_exception
 
@@ -33,13 +42,15 @@ main:
     0
     pipe.system "true"
 
+  simple_ls_command := if_windows "dir %ComSpec%" "ls /bin/sh"
   expect_equals
     0
-    pipe.system "ls /bin/sh"
+    pipe.system
+      simple_ls_command
 
   // run_program does not parse the command line, splitting at spaces, so it's
   // looking for a single program of the name "ls /bin/sh".
-  expect_file_not_found "ls /bin/sh": pipe.run_program "ls /bin/sh"
+  expect_file_not_found simple_ls_command: pipe.run_program simple_ls_command
 
   // There's no such program as ll.
   expect_file_not_found "ll": pipe.run_program "ll" "/bin/sh"
@@ -68,6 +79,7 @@ main:
   expect_file_not_found no_exist_cmd : pipe.to no_exist_cmd
 
   tmpdir := mkdtemp "/tmp/toit_file_test_"
+  old_current_directory := cwd
 
   try:
     chdir tmpdir
@@ -88,12 +100,19 @@ main:
       chdir dirname
       go_up = true
 
-      p = pipe.from "shasum" filename
       output := ""
-      while byte_array := p.read:
-        output += byte_array.to_string
+      if platform == PLATFORM_WINDOWS:
+        p = pipe.from "certutil" "-hashfile" filename
+        while byte_array := p.read:
+          output += byte_array.to_string
 
-      expect output == "2dcc8e172c72f3d6937d49be7cf281067d257a62  $filename\n"
+        expect output == "SHA1 hash of $filename:\r\n2dcc8e172c72f3d6937d49be7cf281067d257a62\r\nCertUtil: -hashfile command completed successfully.\r\n"
+      else:
+        p = pipe.from "shasum" filename
+        while byte_array := p.read:
+          output += byte_array.to_string
+
+        expect output == "2dcc8e172c72f3d6937d49be7cf281067d257a62  $filename\n"
 
       chdir ".."
       go_up = false
@@ -107,15 +126,26 @@ main:
   finally:
     rmdir --recursive tmpdir
 
-  expect_error "shasum: exited with status 1":
-    p := pipe.from "shasum" "file_that_doesn't exist"
-    while p.read:
-      // nothing
+  chdir old_current_directory
 
-  expect_error "shasum: exited with status 1":
-    sum := pipe.backticks "shasum" "file_that_doesn't exist"
+  if platform == PLATFORM_WINDOWS:
+    expect_error "certutil: exited with status 2":
+      p := pipe.from "certutil" "file_that_doesn't exist"
+      while p.read:
+        // Do nothing.
 
-  tar_exit_code := (platform == "Linux") ? 2 : 1
+    expect_error "certutil: exited with status 2":
+      sum := pipe.backticks "certutil" "file_that_doesn't exist"
+  else:
+    expect_error "shasum: exited with status 1":
+      p := pipe.from "shasum" "file_that_doesn't exist"
+      while p.read:
+        // Do nothing.
+
+    expect_error "shasum: exited with status 1":
+      sum := pipe.backticks "shasum" "file_that_doesn't exist"
+
+  tar_exit_code := (platform == PLATFORM_LINUX) ? 2 : 1
   expect_error "tar: exited with status $tar_exit_code":
     p := pipe.to "tar" "-xvf" "-" "foo.txt"
     p.close  // Close without sending a valid tar file.
