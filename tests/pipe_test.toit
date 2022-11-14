@@ -132,7 +132,7 @@ main:
     expect_error "certutil: exited with status 2":
       p := pipe.from "certutil" "file_that_doesn't exist"
       while p.read:
-        // nothing
+        // Do nothing.
 
     expect_error "certutil: exited with status 2":
       sum := pipe.backticks "certutil" "file_that_doesn't exist"
@@ -140,7 +140,7 @@ main:
     expect_error "shasum: exited with status 1":
       p := pipe.from "shasum" "file_that_doesn't exist"
       while p.read:
-        // nothing
+        // Do nothing.
 
     expect_error "shasum: exited with status 1":
       sum := pipe.backticks "shasum" "file_that_doesn't exist"
