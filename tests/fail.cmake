@@ -17,7 +17,7 @@ set(FAILING_TESTS
 )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" OR "${CMAKE_SYSTEM_NAME}" STREQUAL "MSYS")
-  list(APPEND TOIT_FAILING_TESTS
+  list(APPEND FAILING_TESTS
     ${TEST_PREFIX}/tests/pipe_crash_test.toit
   )
 endif()
