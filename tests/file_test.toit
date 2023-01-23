@@ -204,7 +204,7 @@ test_recursive test_dir:
 test_cwd test_dir:
   current_dir := cwd
   chdir test_dir
-  expect_equals test_dir cwd
+  expect_equals (realpath test_dir) (realpath cwd)
   chdir current_dir
 
 test_realpath test_dir:
