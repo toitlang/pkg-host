@@ -126,6 +126,13 @@ same_entry_ a b:
   if a[file.ST_INO] != b[file.ST_INO]: return false
   return a[file.ST_DEV] == b[file.ST_DEV]
 
+is_absolute_ path:
+  if path.starts_with "/": return true
+  if platform == PLATFORM_WINDOWS:
+    if path.starts_with "//" or path.starts_with "\\\\": return true
+    if path >= 3 or path[1] == ':': return true
+  return false
+
 // Get the canonical version of a file path, removing . and .. and resolving
 // symbolic links.  Returns null if the path does not exist, but may throw on
 // other errors such as symlink loops.
@@ -135,11 +142,8 @@ realpath path:
   // Relative paths must be prepended with the current directory, and we can't
   // let the C realpath routine do that for us, because it doesn't understand
   // what our current directory is.
-  if platform == PLATFORM_WINDOWS:
-    if not path.starts_with "\\" or path.size <= 2 or path[1..2] != ":\\":
-      path = "$cwd\\$path"
-  else:
-    if not path.starts_with "/": path = "$cwd/$path"
+  if not is_absolute_ path:
+    path = "$cwd/$path"
   #primitive.file.realpath
 
 // Get the current working directory.  Like the 'pwd' command, this works by

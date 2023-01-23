@@ -52,6 +52,8 @@ main:
   try:
 
     test_recursive tmpdir
+    test_cwd tmpdir
+    test_realpath tmpdir
 
     chdir tmpdir
 
@@ -198,3 +200,16 @@ test_recursive test_dir:
 
   rmdir --recursive rec_dir
   expect (not file.stat rec_dir)
+
+test_cwd test_dir:
+  current_dir := cwd
+  chdir test_dir
+  expect_equals test_dir cwd
+  chdir current_dir
+
+test_realpath test_dir:
+  current_dir := cwd
+  chdir test_dir
+  expect_equals test_dir (realpath ".")
+  expect_equals test_dir test_dir
+  chdir current_dir
