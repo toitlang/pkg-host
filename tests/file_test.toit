@@ -211,7 +211,8 @@ test_realpath test_dir:
   current_dir := cwd
   // Use "realpath" when changing into the test-directory.
   // The directory might be a symlink.
-  chdir (realpath test_dir)
-  expect_equals test_dir (realpath ".")
-  expect_equals test_dir test_dir
+  real_tmp := realpath test_dir
+  chdir real_tmp
+  expect_equals real_tmp (realpath ".")
+  expect_equals real_tmp (realpath test_dir)
   chdir current_dir
