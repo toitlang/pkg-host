@@ -130,7 +130,7 @@ is_absolute_ path:
   if path.starts_with "/": return true
   if platform == PLATFORM_WINDOWS:
     if path.starts_with "//" or path.starts_with "\\\\": return true
-    if path >= 3 or path[1] == ':': return true
+    if path.size >= 3 and path[1] == ':': return true
   return false
 
 // Get the canonical version of a file path, removing . and .. and resolving
