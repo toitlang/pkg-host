@@ -1,4 +1,4 @@
-// Copyright (C) 2019 Toitware ApS.
+// Copyright (C) 2023 Toitware ApS.
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
@@ -19,14 +19,13 @@ main args:
     pipes := pipe.fork
       true  // use_path
       pipe.PIPE_CREATED  // stdin
-      pipe.PIPE_CREATED  // stdiout
+      pipe.PIPE_CREATED  // stdout
       pipe.PIPE_CREATED  // stderr
       crash_exe
       [crash_exe] + signal_arg
 
     pid := pipes[3]
     pipe.wait_for pid
-
 
   signals_to_test := [
     4, // SIGILL

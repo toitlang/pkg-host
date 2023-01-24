@@ -22,8 +22,10 @@ add_executable(
   crash.cc
   )
 
-# add_dependencies(check crash)
-# add_dependencies(check_slow crash)
+# Make sure the crash executable is compiled when tested with Opentoit.
+if (TARGET check_external)
+  add_dependencies(check_external crash)
+endif()
 
 include(ProcessorCount)
 ProcessorCount(NUM_CPU)
