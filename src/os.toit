@@ -22,8 +22,28 @@ class EnvironmentVariableMap:
   contains key/string -> bool:
     return (get key) != null
 
+  all -> Map:
+    result := {:}
+    index := 0
+    while true:
+      chunk := get_environment_variables_ index
+      if not chunk: break
+      for i := 0; i < chunk.size; i++:
+        str := chunk[i]
+        if str == null:
+          index += i
+          continue
+        equals := str.index_of "="
+        if equals == -1:
+          result[str] = ""
+        else:
+          result[str[..equals]] = str[equals + 1 ..]
+    return result
 
 env / EnvironmentVariableMap ::= EnvironmentVariableMap.private_
 
 get_env_ key/string -> string?:
   #primitive.core.get_env
+
+get_environment_variables_ index/int -> List?:
+  #primitive.core.get_environment_variables

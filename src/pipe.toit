@@ -165,9 +165,15 @@ To avoid zombies you must either give the child process to either
   `dont_wait_for` or `wait_for`.
 Optionally you can pass pipes that should be passed to the
   child process as open file descriptors 3 and/or 4.
+Optionally, $environment variables can be passed as a map.
 */
-fork use_path stdin stdout stderr --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
+fork use_path stdin stdout stderr --environment/map?=null --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
   result := List 4
+  flat_environment := environment ? (Array_ environment.size * 2) : (Array_ 0)
+  index := 0
+  environment.do: | key value |
+    flat_environment[index++] = key.stringify as string
+    flat_environment[index++] = value.stringify as string
   exception := catch:
     if stdin == PIPE_CREATED:
       stdin = create_pipe_helper_ true 0 result
@@ -177,7 +183,7 @@ fork use_path stdin stdout stderr --file_descriptor_3/OpenPipe?=null --file_desc
       stderr = create_pipe_helper_ false 2 result
     fd_3 := file_descriptor_3 ? file_descriptor_3.fd : -1
     fd_4 := file_descriptor_4 ? file_descriptor_4.fd : -1
-    result[3] = fork_ process_resource_group_ use_path stdin stdout stderr fd_3 fd_4 command (Array_.ensure arguments)
+    result[3] = fork_ process_resource_group_ use_path stdin stdout stderr fd_3 fd_4 command (Array_.ensure arguments) flat_environment
   if exception:
     // If an exception is thrown we end up here.  If the fork succeeded then
     // the pipes would be closed.  Here we have an error and need to close
@@ -286,9 +292,9 @@ Can be passed either a command (with no arguments) as a
 Throws an exception if the program exits with a signal or a non-zero
   exit value.
 */
-backticks arguments -> string:
+backticks --environment/map?=null arguments -> string:
   if arguments is string:
-    return backticks [arguments]
+    return backticks --environment=environment [arguments]
   pipe_ends := OpenPipe false
   stdout := pipe_ends.fd
   pipes := fork true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
@@ -411,7 +417,7 @@ print_to_ pipe msg/string:
 is_a_tty_ resource:
   #primitive.pipe.is_a_tty
 
-fork_ group use_path stdin stdout stderr fd_3 fd_4 command arguments:
+fork_ group use_path stdin stdout stderr fd_3 fd_4 command arguments environment:
   #primitive.pipe.fork
 
 fd_to_pipe_ resource_group fd:
