@@ -4,8 +4,9 @@
 
 file(GLOB TESTS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*_test.toit" "*_test_slow.toit")
 
-set(TOIT_EXEC "toit.run" CACHE FILEPATH "The executable used to run the tests")
-set(TPKG_EXEC "toit.pkg" CACHE FILEPATH "The executable used to install the packages")
+# Add windows exe extension.
+set(TOIT_EXEC "toit.run${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "The executable used to run the tests")
+set(TPKG_EXEC "toit.pkg${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "The executable used to install the packages")
 set(TEST_TIMEOUT 40 CACHE STRING "The maximal amount of time each test is allowed to run")
 set(SLOW_TEST_TIMEOUT 200 CACHE STRING "The maximal amount of time each slow test is allowed to run")
 
@@ -15,6 +16,16 @@ add_custom_target(
   COMMAND "${TPKG_EXEC}" install
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+
+add_executable(
+  crash
+  crash.cc
+  )
+
+# Make sure the crash executable is compiled when tested with Opentoit.
+if (TARGET check_external)
+  add_dependencies(check_external crash)
+endif()
 
 include(ProcessorCount)
 ProcessorCount(NUM_CPU)
@@ -39,7 +50,7 @@ foreach(file ${TESTS})
 
   add_test(
     NAME "${test_name}"
-    COMMAND "${TOIT_EXEC}" "${file}"
+    COMMAND "${TOIT_EXEC}" "${file}" $<TARGET_FILE:crash>
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
 
