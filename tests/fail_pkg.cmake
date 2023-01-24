@@ -13,6 +13,12 @@
 # The license can be found in the file `LICENSE` in the top level
 # directory of this repository.
 
+# We don't use the standard fail.cmake here, as the tests in here
+# are only failing when tested as package (but not in the opentoit
+# repo).
+# This is, because the opentoit repo doesn't pass in the required
+# crash argument.
+
 set(FAILING_TESTS
 )
 
