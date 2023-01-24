@@ -12,6 +12,10 @@ main args:
   // This test does not work on ESP32 since you can't launch subprocesses.
   if platform == "FreeRTOS": return
 
+  // This test gets called by the external test script on the SDK, which does
+  // not pass any arguments.
+  if args.size == 0: return
+
   crash_exe := args[0]
 
   run_crash := : | signal/int? |
