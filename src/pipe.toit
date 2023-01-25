@@ -166,14 +166,19 @@ To avoid zombies you must either give the child process to either
 Optionally you can pass pipes that should be passed to the
   child process as open file descriptors 3 and/or 4.
 Optionally, $environment variables can be passed as a map.
+  Keys in the map should be strings, and values should be strings or null,
+  where null indicates that the variable should be unset in the child
+  process.
+Note that if you override the PATH environment variable, but set the $use_path
+  flag, the new value of PATH will be used to find the executable.
 */
-fork use_path stdin stdout stderr --environment/map?=null --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
+fork use_path stdin stdout stderr --environment/Map?=null --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
   result := List 4
-  flat_environment := environment ? (Array_ environment.size * 2) : (Array_ 0)
+  flat_environment := environment ? (Array_ environment.size * 2) : null
   index := 0
-  environment.do: | key value |
-    flat_environment[index++] = key.stringify as string
-    flat_environment[index++] = value.stringify as string
+  if environment: environment.do: | key value |
+    flat_environment[index++] = key.stringify
+    flat_environment[index++] = value ? value.stringify : null
   exception := catch:
     if stdin == PIPE_CREATED:
       stdin = create_pipe_helper_ true 0 result
@@ -207,17 +212,21 @@ fork use_path stdin stdout stderr --environment/map?=null --file_descriptor_3/Op
       throw "Error trying to run '$command'$clarification: $exception"
   return result
 
-to command arg1:
-  return to [command, arg1]
+/// Alternative to $(to arguments).
+to --environment/Map?=null command arg1:
+  return to --environment=environment [command, arg1]
 
-to command arg1 arg2:
-  return to [command, arg1, arg2]
+/// Alternative to $(to arguments).
+to --environment/Map?=null command arg1 arg2:
+  return to --environment=environment [command, arg1, arg2]
 
-to command arg1 arg2 arg3:
-  return to [command, arg1, arg2, arg3]
+/// Alternative to $(to arguments).
+to --environment/Map?=null command arg1 arg2 arg3:
+  return to --environment=environment [command, arg1, arg2, arg3]
 
-to command arg1 arg2 arg3 arg4:
-  return to [command, arg1, arg2, arg3, arg4]
+/// Alternative to $(to arguments).
+to --environment/Map?=null command arg1 arg2 arg3 arg4:
+  return to --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
 Forks a program, and returns its stdin pipe.
@@ -229,27 +238,32 @@ The user of this function is expected to eventually call close on the writer,
 The child process is expected to exit when its stdin is closed.
 The close method on the returned writer will throw an exception if the
   child process crashes or exits with a non-zero exit code.
+The $environment argument is used as in $fork.
 */
-to arguments:
+to --environment/Map?=null arguments:
   if arguments is string:
     return to [arguments]
   pipe_ends := OpenPipe true --child_process_name=arguments[0]
   stdin := pipe_ends.fd
-  pipes := fork true stdin PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
+  pipes := fork --environment=environment true stdin PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
   pipe_ends.pid = pipes[3]
   return pipe_ends
 
-from command arg1:
-  return from [command, arg1]
+/// Alternative to $(from arguments).
+from --environment/Map?=null command arg1:
+  return from --environment=environment [command, arg1]
 
-from command arg1 arg2:
-  return from [command, arg1, arg2]
+/// Alternative to $(from arguments).
+from --environment/Map?=null command arg1 arg2:
+  return from --environment=environment [command, arg1, arg2]
 
-from command arg1 arg2 arg3:
-  return from [command, arg1, arg2, arg3]
+/// Alternative to $(from arguments).
+from --environment/Map?=null command arg1 arg2 arg3:
+  return from --environment=environment [command, arg1, arg2, arg3]
 
-from command arg1 arg2 arg3 arg4:
-  return from [command, arg1, arg2, arg3, arg4]
+/// Alternative to $(from arguments).
+from --environment/Map?=null command arg1 arg2 arg3 arg4:
+  return from --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
 Forks a program, and return its stdout pipe.
@@ -262,27 +276,32 @@ The user of this function is expected to read the returned reader
   until the child process exits.
 The read method on the reader throws an exception if the process crashes or
   has a non-zero exit code.
+The $environment argument is used as in $fork.
 */
-from arguments:
+from --environment/Map?=null arguments:
   if arguments is string:
     return from [arguments]
   pipe_ends := OpenPipe false --child_process_name=arguments[0]
   stdout := pipe_ends.fd
-  pipes := fork true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
+  pipes := fork --environment=environment true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
   pipe_ends.pid = pipes[3]
   return pipe_ends
 
-backticks command arg1 -> string:
-  return backticks [command, arg1]
+/// Alternative to $(backticks arguments).
+backticks --environment/Map?=null command arg1 -> string:
+  return backticks --environment=environment [command, arg1]
 
-backticks command arg1 arg2 -> string:
-  return backticks [command, arg1, arg2]
+/// Alternative to $(backticks arguments).
+backticks --environment/Map?=null command arg1 arg2 -> string:
+  return backticks --environment=environment [command, arg1, arg2]
 
-backticks command arg1 arg2 arg3 -> string:
-  return backticks [command, arg1, arg2, arg3]
+/// Alternative to $(backticks arguments).
+backticks --environment/Map?=null command arg1 arg2 arg3 -> string:
+  return backticks --environment=environment [command, arg1, arg2, arg3]
 
-backticks command arg1 arg2 arg3 arg4 -> string:
-  return backticks [command, arg1, arg2, arg3, arg4]
+/// Alternative to $(backticks arguments).
+backticks --environment/Map?=null command arg1 arg2 arg3 arg4 -> string:
+  return backticks --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
 Forks a program, and return the output from its stdout.
@@ -291,13 +310,14 @@ Can be passed either a command (with no arguments) as a
   string, or an array of arguments, where the 0th argument is the command.
 Throws an exception if the program exits with a signal or a non-zero
   exit value.
+The $environment argument is used as in $fork.
 */
-backticks --environment/map?=null arguments -> string:
+backticks --environment/Map?=null arguments -> string:
   if arguments is string:
     return backticks --environment=environment [arguments]
   pipe_ends := OpenPipe false
   stdout := pipe_ends.fd
-  pipes := fork true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
+  pipes := fork --environment=environment true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
   child_process := pipes[3]
   reader := reader.BufferedReader pipe_ends
   reader.buffer_all
@@ -330,23 +350,28 @@ Throws an exception if the shell cannot be run, but otherwise returns the
   exit value of shell, which is the exit value of the program it ran.
 If the program run by the shell dies with a signal then the exit value is 128 +
   the signal number.
+The $environment argument is used as in $fork.
 */
-system command -> int?:
+system --environment/Map?=null command -> int?:
   if platform == PLATFORM_WINDOWS:
-    return run_program ["cmd", "/s", "/c",  command]
+    return run_program --environment=environment ["cmd", "/s", "/c",  command]
   else:
-    return run_program ["/bin/sh", "-c", command]
+    return run_program --environment=environment ["/bin/sh", "-c", command]
 
-run_program command arg1 -> int?:
+/// Alternative to $(run_program arguments).
+run_program --environment/Map?=null command arg1 -> int?:
   return run_program [command, arg1]
 
-run_program command arg1 arg2 -> int?:
+/// Alternative to $(run_program arguments).
+run_program --environment/Map?=null command arg1 arg2 -> int?:
   return run_program [command, arg1, arg2]
 
-run_program command arg1 arg2 arg3 -> int?:
+/// Alternative to $(run_program arguments).
+run_program --environment/Map?=null command arg1 arg2 arg3 -> int?:
   return run_program [command, arg1, arg2, arg3]
 
-run_program command arg1 arg2 arg3 arg4 -> int?:
+/// Alternative to $(run_program arguments).
+run_program --environment/Map?=null command arg1 arg2 arg3 arg4 -> int?:
   return run_program [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -356,11 +381,12 @@ Can be passed either a command (with no arguments) as a
   string, or an array of arguments, where the 0th argument is the command.
 Throws an exception if the command cannot be run or if the command exits
   with a signal, but otherwise returns the exit value of the program.
+The $environment argument is used as in $fork.
 */
-run_program arguments -> int:
+run_program --environment/Map?=null arguments -> int:
   if arguments is string:
     return run_program [arguments]
-  pipes := fork true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
+  pipes := fork --environment=environment true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
   child_process := pipes[3]
   exit_value := wait_for child_process
   signal := exit_signal exit_value
@@ -418,7 +444,7 @@ is_a_tty_ resource:
   #primitive.pipe.is_a_tty
 
 fork_ group use_path stdin stdout stderr fd_3 fd_4 command arguments environment:
-  #primitive.pipe.fork
+  #primitive.pipe.fork2
 
 fd_to_pipe_ resource_group fd:
   #primitive.pipe.fd_to_pipe
