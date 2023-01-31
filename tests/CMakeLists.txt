@@ -22,11 +22,6 @@ add_executable(
   crash.cc
   )
 
-# Make sure the crash executable is compiled when tested with Opentoit.
-if (TARGET check_external)
-  add_dependencies(check_external crash)
-endif()
-
 include(ProcessorCount)
 ProcessorCount(NUM_CPU)
 
@@ -37,7 +32,10 @@ add_custom_target(
 )
 
 set(TEST_PREFIX "")
+# Tests that fail locally and on toitlang/toit.
 include(fail.cmake OPTIONAL)
+# Tests that only fail when called with this test runner.
+include(fail_pkg.cmake OPTIONAL)
 
 message("Failing tests: ${FAILING_TESTS}")
 message("Skipped tests: ${SKIP_TESTS}")
