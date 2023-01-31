@@ -17,30 +17,48 @@ APPEND ::= 4
 CREAT ::= 8
 TRUNC ::= 0x10
 
-// Indices for the array returned by file.stat.
+/// Index of the device number in the array returned by $stat.
 ST_DEV ::= 0
+/// Index of the inode number in the array returned by $stat.
 ST_INO ::= 1
+/// Index of the permissions bits in the array returned by $stat.
 ST_MODE ::= 2
+/// Index of the file type number in the array returned by $stat.
 ST_TYPE ::= 3
+/// Index of the link count in the array returned by $stat.
 ST_NLINK ::= 4
+/// Index of the owning user id in the array returned by $stat.
 ST_UID ::= 5
+/// Index of the owning group id in the array returned by $stat.
 ST_GID ::= 6
+/// Index of the file size in the array returned by $stat.
 ST_SIZE ::= 7
+/// Index of the last access time in the array returned by $stat.
 ST_ATIME ::= 8
+/// Index of the last modification time in the array returned by $stat.
 ST_MTIME ::= 9
+/// Index of the creation time in the array returned by $stat.
 ST_CTIME ::= 10
 
-// Filesystem entry types for the ST_TYPE field of file.stat.
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named FIFO.
 FIFO ::= 0
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a character device.
 CHARACTER_DEVICE ::= 1
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a directory.
 DIRECTORY ::= 2
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a block device.
 BLOCK_DEVICE ::= 3
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a regular file.
 REGULAR_FILE ::= 4
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a symbolic link.
 SYMBOLIC_LINK ::= 5
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
 
-// An open file with a current position.  Corresponds in many ways to a file
-// descriptor in Posix.
+/**
+An open file with a current position.  Corresponds in many ways to a file
+  descriptor in Posix.
+*/
 class Stream implements Reader:
   fd_ := ?
 
@@ -167,21 +185,24 @@ write_content content --path/string --permissions/int?=null -> none:
   finally:
     writer.close
 
-// Path exists and is a file.
-is_file name:
-  stat := stat name
+/// Returns whether a path exists and is a regular file.
+is_file name --follow_links/bool=true -> bool:
+  stat := stat_ name follow_links
   if not stat: return false
   return stat[ST_TYPE] == REGULAR_FILE
 
-// Path exists and is a directory.
-is_directory name:
-  stat := stat name
+/// Returns whether a path exists and is a diretory.
+is_directory name --follow_links/bool=true -> bool:
+  stat := stat_ name follow_links
   if not stat: return false
   return stat[ST_TYPE] == DIRECTORY
 
-// Return file size in bytes or null for no such file.
+/**
+Returns the file size in bytes or null for no such file.
+Throws an error if the name exists but is not a regular file.
+*/
 size name:
-  stat := stat name
+  stat := stat_ name true
   if not stat: return null
   if stat[ST_TYPE] != REGULAR_FILE: throw "INVALID_ARGUMENT"
   return stat[ST_SIZE]
@@ -191,9 +212,19 @@ size name:
 open_ name flags permissions:
   #primitive.file.open
 
-// Returns an array describing the given named entry in the filesystem, see the
-// index names ST_DEV, etc.
+/**
+Returns an array describing the given named entry in the filesystem, see the
+  index names $ST_DEV, etc.
+*/
 stat name/string --follow_links/bool=true -> List?:
+  result := stat_ name follow_links
+  if not result: return null
+  result[ST_ATIME] = Time.epoch --us=result[ST_ATIME]
+  result[ST_MTIME] = Time.epoch --us=result[ST_MTIME]
+  result[ST_CTIME] = Time.epoch --us=result[ST_CTIME]
+  return result
+
+stat_ name/string follow_links/bool -> List?:
   #primitive.file.stat
 
 // Takes an open file descriptor and determines if it represents a file
@@ -214,13 +245,17 @@ write_ descriptor data from to:
 close_ descriptor:
   #primitive.file.close
 
-// Delete a file, given its name.  Like 'rm' and the 'unlink()' system call,
-// this only removes one hard link to a file. The file may still exist if there
-// were other hard links.
-delete name:
+/**
+Deletes a file, given its name.
+Like 'rm' and the 'unlink()' system call, this only removes one hard link to a
+  file. The file may still exist if there were other hard links.
+*/
+delete name/string -> none:
   #primitive.file.unlink
 
-// Rename a file or directory. Only works if the new name is on the same
-// filesystem.
-rename from to:
+/*
+Renames a file or directory.
+Only works if the new name is on the same filesystem.
+*/
+rename from/string to/string -> none:
   #primitive.file.rename
