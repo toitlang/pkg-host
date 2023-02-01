@@ -191,7 +191,7 @@ is_file name --follow_links/bool=true -> bool:
   if not stat: return false
   return stat[ST_TYPE] == REGULAR_FILE
 
-/// Returns whether a path exists and is a diretory.
+/// Returns whether a path exists and is a directory.
 is_directory name --follow_links/bool=true -> bool:
   stat := stat_ name follow_links
   if not stat: return false
@@ -219,9 +219,9 @@ Returns an array describing the given named entry in the filesystem, see the
 stat name/string --follow_links/bool=true -> List?:
   result := stat_ name follow_links
   if not result: return null
-  result[ST_ATIME] = Time.epoch --us=result[ST_ATIME]
-  result[ST_MTIME] = Time.epoch --us=result[ST_MTIME]
-  result[ST_CTIME] = Time.epoch --us=result[ST_CTIME]
+  result[ST_ATIME] = Time.epoch --ns=result[ST_ATIME]
+  result[ST_MTIME] = Time.epoch --ns=result[ST_MTIME]
+  result[ST_CTIME] = Time.epoch --ns=result[ST_CTIME]
   return result
 
 stat_ name/string follow_links/bool -> List?:
@@ -247,15 +247,13 @@ close_ descriptor:
 
 /**
 Deletes a file, given its name.
-Like 'rm' and the 'unlink()' system call, this only removes one hard link to a
-  file. The file may still exist if there were other hard links.
 */
 delete name/string -> none:
   #primitive.file.unlink
 
 /*
 Renames a file or directory.
-Only works if the new name is on the same filesystem.
+Only works if the $to name is on the same filesystem.
 */
 rename from/string to/string -> none:
   #primitive.file.rename
