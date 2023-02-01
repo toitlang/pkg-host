@@ -51,14 +51,14 @@ main:
 
   try:
 
-    //test_recursive tmpdir
-    //test_cwd tmpdir
-    //test_realpath tmpdir
+    test_recursive tmpdir
+    test_cwd tmpdir
+    test_realpath tmpdir
 
     chdir tmpdir
 
-    //test_recursive ""
-    //test_recursive "."
+    test_recursive ""
+    test_recursive "."
 
     filename := "test.out"
     dirname := "testdir"
