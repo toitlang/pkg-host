@@ -9,12 +9,23 @@ import host.file
 main:
   // Make a temporary directory in the current dir.
   tmp_dir := directory.mkdtemp "foo-"
-  print tmp_dir
   expect (file.is_directory tmp_dir)
+
+  directory.chdir tmp_dir
+  // Make a temporary directory in the current dir.
+  tmp_dir2 := directory.mkdtemp "bar-"
+
+  directory.chdir ".."
+
+  dir := directory.DirectoryStream tmp_dir
+  bar_name := dir.next
+  expect
+      bar_name.starts_with "bar-"
+
+  directory.rmdir tmp_dir2
   directory.rmdir tmp_dir
 
   // Make a temporary directory in the system dir.
   tmp_dir = directory.mkdtemp "/tmp/foo-"
-  print tmp_dir
   expect (file.is_directory tmp_dir)
   directory.rmdir tmp_dir
