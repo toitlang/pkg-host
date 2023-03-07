@@ -65,6 +65,10 @@ Returns the name of the created directory.
 On Windows the prefix "/tmp/" is recognized, and the system's temporary
   directory is used, as returned by the Win32 API GetTempPath() call.
 
+There is a hard-to-fix bug on Posix where a relative path is not handled
+  correctly in the presence of calls to chdir.  The workaround is to use
+  an absolute path like "/tmp/foo-".
+
 # Examples
 ```
 test_dir := mkdtemp "/tmp/test-"
