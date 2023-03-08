@@ -13,10 +13,10 @@ main args:
   if platform == "FreeRTOS": return
 
   // This test gets called by the external test script on the SDK, which does
-  // not pass any arguments.
-  if args.size == 0: return
+  // not pass two arguments.
+  if args.size < 2: return
 
-  crash_exe := args[0]
+  crash_exe := args[1]
 
   run_crash := : | signal/int? |
     signal_arg := signal ? ["$signal"] : []
