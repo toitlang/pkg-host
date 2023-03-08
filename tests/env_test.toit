@@ -8,15 +8,15 @@ import host.os
 import host.file
 
 main args:
-  if args.size < 2:
-    print "Usage: env_test.toit <something> <toit_exe>"
+  if args.size < 1:
+    print "Usage: env_test.toit <toit_exe>"
     exit 1
 
   if not file.is_file "tests/echo.toit":
     print "Cannot find toit file 'echo.toit' in tests directory"
     exit 1
 
-  toit_exe := args[1]
+  toit_exe := args[0]
 
   if not file.is_file toit_exe:
     print "Cannot find toit executable '$toit_exe'"

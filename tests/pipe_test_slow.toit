@@ -48,11 +48,11 @@ low_level_test toit_exe:
     output.read
 
 main args:
-  if args.size < 2:
-    print "Usage: pipe_test_slow.toit <something> <toit_exe>"
+  if args.size < 1:
+    print "Usage: pipe_test_slow.toit <toit_exe>"
     exit 1
 
-  low_level_test args[1]
+  low_level_test args[0]
 
   // This test does not work on ESP32 since you can't launch subprocesses.
   if platform == PLATFORM_FREERTOS: return
