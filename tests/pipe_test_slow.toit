@@ -29,7 +29,31 @@ if_windows windows unix:
   if platform == PLATFORM_WINDOWS: return windows
   return unix
 
-main:
+low_level_test toit_exe:
+  return
+  // TODO: This is intended to test that we can have a different
+  // program name to the name in arguments[0].  But it doesn't work on Windows
+  // at the moment.  There was an implementation in
+  // https://github.com/toitlang/toit/pull/1400, but it fails to find
+  // executables without the explicit ".exe" extension, so it was annoying.
+  INHERIT ::= pipe.PIPE_INHERITED
+  output := pipe.OpenPipe false
+  stdout := output.fd
+  array := pipe.fork true INHERIT stdout INHERIT toit_exe ["ignored-0-argument", "echo.toit", "horse"]
+  expect_equals
+    "horse"
+    output.read.to_string.trim
+  expect_equals
+    null
+    output.read
+
+main args:
+  if args.size < 2:
+    print "Usage: echo.toit <something> <toit_exe>"
+    exit 1
+
+  low_level_test args[1]
+
   // This test does not work on ESP32 since you can't launch subprocesses.
   if platform == PLATFORM_FREERTOS: return
 
@@ -161,16 +185,18 @@ long_running_sleep:
   pipe.run_program "sleep" "1000"
 
 pipe_large_file:
-  buffer := ByteArray 1024 * 10
-  o := pipe.to ["sh", "-c", "cat > /dev/null"]
-  for i := 0; i < 100; i++:
-    o.write buffer
-  o.close
+  if (file.is_file "/bin/sh") and (file.is_file "/usr/bin/cat"):
+    buffer := ByteArray 1024 * 10
+    o := pipe.to ["/bin/sh", "-c", "/usr/bin/cat > /dev/null"]
+    for i := 0; i < 100; i++:
+      o.write buffer
+    o.close
 
 write_closed_stdin_exception:
-  stdin := pipe.to ["true"]
+  if file.is_file "/usr/bin/true":
+    stdin := pipe.to ["true"]
 
-  expect_error "Broken pipe":
-    while true:
-      stdin.write
-        ByteArray 1024
+    expect_error "Broken pipe":
+      while true:
+        stdin.write
+          ByteArray 1024

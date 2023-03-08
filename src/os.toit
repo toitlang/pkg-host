@@ -22,7 +22,6 @@ class EnvironmentVariableMap:
   contains key/string -> bool:
     return (get key) != null
 
-
 env / EnvironmentVariableMap ::= EnvironmentVariableMap.private_
 
 get_env_ key/string -> string?:
