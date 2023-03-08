@@ -2,6 +2,8 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
+// Helper program for tests, because echo and the shell are not available everywhere.
+
 import host.os
 
 // Expands environment variables in the arguments, using $ syntax.
@@ -9,16 +11,19 @@ main args:
   print
       (args.map: expand it).join " "
 
+// Expands a string like 'Hello $USER, and their friends' by replacing '$USER'
+//   with the value of the environment variable.  A double dollar is replaced
+//   with a single literal dollar sign.
 expand src -> string:
-  dont_expand := true
+  expand := false
   result := []
   src.split "\$": | part |
-    if dont_expand:
+    if not expand:
       result.add part
-      dont_expand = false
-    else if part == "":
+      expand = true
+    else if part == "":  // Double dollar detected: Replace with a literal $.
       result.add "\$"
-      dont_expand = true
+      expand = false
     else:
       var := part
       rest := ""
@@ -33,7 +38,8 @@ expand src -> string:
             var = part[0..i]
             rest = part[i..]
             break
-      catch: result.add os.env[var]
+      value := os.env.get var
+      if value: result.add value
       result.add rest
   return result.join ""
 

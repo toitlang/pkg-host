@@ -172,13 +172,16 @@ Optionally, $environment variables can be passed as a map.
 Note that if you override the PATH environment variable, but set the $use_path
   flag, the new value of PATH will be used to find the executable.
 */
-fork use_path stdin stdout stderr --environment/Map?=null --file_descriptor_3/OpenPipe?=null --file_descriptor_4/OpenPipe?=null command arguments -> List:
+fork use_path stdin stdout stderr command arguments -> List
+    --environment/Map?=null
+    --file_descriptor_3/OpenPipe?=null
+    --file_descriptor_4/OpenPipe?=null:
   result := List 4
   flat_environment := environment ? (Array_ environment.size * 2) : null
   index := 0
   if environment: environment.do: | key value |
     flat_environment[index++] = key.stringify
-    flat_environment[index++] = value ? value.stringify : null
+    flat_environment[index++] = (value == null) ? null : value.stringify
   exception := catch:
     if stdin == PIPE_CREATED:
       stdin = create_pipe_helper_ true 0 result

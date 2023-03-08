@@ -9,7 +9,7 @@ import host.file
 
 main args:
   if args.size < 2:
-    print "Usage: echo.toit <something> <toit_exe>"
+    print "Usage: env_test.toit <something> <toit_exe>"
     exit 1
 
   if not file.is_file "echo.toit":
