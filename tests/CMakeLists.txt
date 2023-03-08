@@ -48,7 +48,7 @@ foreach(file ${TESTS})
 
   add_test(
     NAME "${test_name}"
-    COMMAND "${TOIT_EXEC}" "tests/${file}" tests/$<TARGET_FILE:crash> "${TOIT_EXEC}"
+    COMMAND "${TOIT_EXEC}" "tests/${file}" $<TARGET_FILE:crash> "${TOIT_EXEC}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
   )
 
