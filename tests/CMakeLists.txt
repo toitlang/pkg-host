@@ -49,7 +49,7 @@ foreach(file ${TESTS})
   add_test(
     NAME "${test_name}"
     COMMAND "${TOIT_EXEC}" "${file}" $<TARGET_FILE:crash> "${TOIT_EXEC}"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
   )
 
   if ("${file}" MATCHES "slow.toit")

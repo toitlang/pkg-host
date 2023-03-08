@@ -39,7 +39,7 @@ low_level_test toit_exe:
   INHERIT ::= pipe.PIPE_INHERITED
   output := pipe.OpenPipe false
   stdout := output.fd
-  array := pipe.fork true INHERIT stdout INHERIT toit_exe ["ignored-0-argument", "echo.toit", "horse"]
+  array := pipe.fork true INHERIT stdout INHERIT toit_exe ["ignored-0-argument", "tests/echo.toit", "horse"]
   expect_equals
     "horse"
     output.read.to_string.trim
@@ -49,7 +49,7 @@ low_level_test toit_exe:
 
 main args:
   if args.size < 2:
-    print "Usage: echo.toit <something> <toit_exe>"
+    print "Usage: pipe_test_slow.toit <something> <toit_exe>"
     exit 1
 
   low_level_test args[1]
