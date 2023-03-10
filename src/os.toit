@@ -16,6 +16,9 @@ class EnvironmentVariableMap:
     if not result: throw "ENV NOT FOUND"
     return result
 
+  operator []= key/string value/string -> none:
+    set_env_ key value
+
   get key/string -> string?:
     return get_env_ key
 
@@ -26,3 +29,6 @@ env / EnvironmentVariableMap ::= EnvironmentVariableMap.private_
 
 get_env_ key/string -> string?:
   #primitive.core.get_env
+
+set_env_ key/string value/string? -> none:
+  #primitive.core.set_env

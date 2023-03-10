@@ -64,7 +64,7 @@ main args:
 
   expect_equals
     0
-    pipe.system "true"
+    pipe.system "/usr/bin/true"
 
   simple_ls_command := if_windows "dir %ComSpec%" "ls /bin/sh"
   expect_equals
@@ -184,8 +184,14 @@ main args:
 long_running_sleep:
   pipe.run_program "sleep" "1000"
 
+/// Returns whether a path exists and is a regular file.
+is_char_device name --follow_links/bool=true -> bool:
+  stat := file.stat name --follow_links
+  if not stat: return false
+  return stat[file.ST_TYPE] == file.CHARACTER_DEVICE
+
 pipe_large_file:
-  if (file.is_file "/bin/sh") and (file.is_file "/usr/bin/cat"):
+  if (file.is_file "/bin/sh") and (file.is_file "/usr/bin/cat") and (is_char_device "/dev/null"):
     buffer := ByteArray 1024 * 10
     o := pipe.to ["/bin/sh", "-c", "/usr/bin/cat > /dev/null"]
     for i := 0; i < 100; i++:
@@ -194,7 +200,7 @@ pipe_large_file:
 
 write_closed_stdin_exception:
   if file.is_file "/usr/bin/true":
-    stdin := pipe.to ["true"]
+    stdin := pipe.to ["/usr/bin/true"]
 
     expect_error "Broken pipe":
       while true:

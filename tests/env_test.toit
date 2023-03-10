@@ -8,6 +8,11 @@ import host.os
 import host.file
 
 main args:
+  pathext := os.env.get "PATHEXT"
+  if pathext:
+    // Add the null extension so we can run Unix executables on Wine.
+    os.env["PATHEXT"] = pathext + ";."
+
   if args.size < 1:
     print "Usage: env_test.toit <toit_exe>"
     exit 1
@@ -25,7 +30,7 @@ main args:
   pipe.system "$toit_exe tests/echo.toit FOO=\$FOO"
   pipe.system --environment={"FOO": 123} "$toit_exe tests/echo.toit FOO=\$FOO"
 
-  shell := platform == "Windows" ? ["cmd", "/S", "/C"] : ["sh", "-c"]
+  shell := platform == "Windows" ? ["cmd", "/s", "/C"] : ["sh", "-c"]
 
   expect_equals "BAR=1.5"
       (pipe.backticks --environment={"BAR": 1.5} toit_exe "tests/echo.toit" "BAR=\$BAR").trim
