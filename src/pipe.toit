@@ -383,6 +383,7 @@ Forks a program, and returns the exit status.
 A return value of zero indicates the program ran without errors.
 Uses the /bin/sh shell to parse the command, which is a single string.
 Arguments are split by the shell at unescaped whitespace.
+  On Windows we just split at spaces, since the shell is not available.
 Throws an exception if the shell cannot be run, but otherwise returns the
   exit value of shell, which is the exit value of the program it ran.
 If the program run by the shell dies with a signal then the exit value is 128 +
@@ -391,7 +392,7 @@ The $environment argument is used as in $fork.
 */
 system --environment/Map?=null command -> int?:
   if platform == PLATFORM_WINDOWS:
-    return run_program --environment=environment ["cmd", "/s", "/c",  command]
+    return run_program --environment=environment ["cmd", "/s", "/c"] + (command.split " ")
   else:
     return run_program --environment=environment ["/bin/sh", "-c", command]
 
