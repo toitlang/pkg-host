@@ -2,6 +2,7 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import bytes
 import .file as file
 import reader
 import monitor
@@ -176,6 +177,8 @@ fork use_path stdin stdout stderr command arguments -> List
     --environment/Map?=null
     --file_descriptor_3/OpenPipe?=null
     --file_descriptor_4/OpenPipe?=null:
+  if platform == PLATFORM_WINDOWS:
+    arguments = arguments.map: windows_escape_ it
   result := List 4
   flat_environment := environment ? (Array_ environment.size * 2) : null
   index := 0
@@ -214,6 +217,37 @@ fork use_path stdin stdout stderr command arguments -> List
         clarification = use_path ? " using \$PATH" : " not using path"
       throw "Error trying to run '$command'$clarification: $exception"
   return result
+
+windows_escape_ path/string -> string:
+  if (path.index_of " ") < 0
+      and (path.index_of "\t") < 0
+      and (path.index_of "\"") < 0:
+    return path
+  // The path contains spaces or quotes, so we have to escape.
+  // Make the buffer a little larger than the path in the hope that we don't
+  // have to grow it while building.
+  accumulator := bytes.Buffer.with_initial_size (path.size + 4 + (path.size >> 2))
+  accumulator.write_byte '"'  // Initial double quote.
+  backslashes := 0
+  path.size.repeat:
+    byte := path.at --raw it
+    if byte == '"':
+      // Literal double quote.  Precede with an odd number of backslashes.
+      (backslashes * 2 + 1).repeat: accumulator.write_byte '\\'
+      backslashes = 0
+      accumulator.write_byte '"'
+    else if byte == '\\':
+      // A single backslash in the input.
+      backslashes++
+    else:
+      // Backslashes do not need to be doubled when they do not precede a double quote.
+      backslashes.repeat: accumulator.write_byte '\\'
+      backslashes = 0
+      accumulator.write_byte byte
+  // If there are unoutput backslashes at the end we need to double them.
+  (backslashes * 2).repeat: accumulator.write_byte '\\'
+  accumulator.write_byte '"'  // Final double quote.
+  return accumulator.bytes.to_string
 
 /// Alternative to $(to arguments).
 to --environment/Map?=null command arg1:
