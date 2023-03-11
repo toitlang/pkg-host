@@ -42,7 +42,7 @@ jobs:
 
           if [[ $TOIT_VERSION = latest ]]; then
             echo "TOIT_URL=https://github.com/toitlang/toit/releases/latest/download/$TOIT_FILE" >> $GITHUB_ENV
-          else if [[ $TOIT_VERSION = setenv ]]; then
+          elif [[ $TOIT_VERSION = setenv ]]; then
             echo "TOIT_URL='https://github.com/erikcorry/tmp/blob/main/1e93dd8e/$TOIT_FILE?raw=true'" >> $GITHUB_ENV
           else
             echo "TOIT_URL=https://github.com/toitlang/toit/releases/download/$TOIT_VERSION/$TOIT_FILE" >> $GITHUB_ENV
