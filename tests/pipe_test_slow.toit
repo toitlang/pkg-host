@@ -62,7 +62,7 @@ main args:
   pipe_large_file
   write_closed_stdin_exception
 
-  if file.is_file "/usr/bin/true"
+  if file.is_file "/usr/bin/true":
     expect_equals
       0
       pipe.system "/usr/bin/true"
