@@ -62,9 +62,10 @@ main args:
   pipe_large_file
   write_closed_stdin_exception
 
-  expect_equals
-    0
-    pipe.system "/usr/bin/true"
+  if file.is_file "/usr/bin/true"
+    expect_equals
+      0
+      pipe.system "/usr/bin/true"
 
   simple_ls_command := if_windows "dir %ComSpec%" "ls /bin/sh"
   expect_equals
