@@ -30,19 +30,26 @@ main args:
   pipe.system "$toit_exe tests/echo.toit FOO=\$FOO"
   pipe.system --environment={"FOO": 123} "$toit_exe tests/echo.toit FOO=\$FOO"
 
-  shell := platform == "Windows" ? ["cmd", "/s", "/C"] : ["sh", "-c"]
+  shell := platform == PLATFORM_WINDOWS ? ["cmd", "/s", "/C"] : ["sh", "-c"]
+
+  cmd_list := ["$toit_exe tests/echo.toit BAR=\$BAR"]
+  // cmd (on Windows) and sh -c (on Posix) work a little differently.  Cmd
+  // requires the command to be run to be already split into words.
+  if platform == PLATFORM_WINDOWS: cmd_list = cmd_list[0].split " "
 
   expect_equals "BAR=1.5"
       (pipe.backticks --environment={"BAR": 1.5} toit_exe "tests/echo.toit" "BAR=\$BAR").trim
   expect_equals "BAR="
-      (pipe.backticks shell + ["$toit_exe tests/echo.toit BAR=\$BAR"]).trim
+      (pipe.backticks shell + cmd_list).trim
 
   fd := pipe.from --environment={"FISH": "HORSE"} toit_exe "tests/echo.toit" "\$FISH"
   expect_equals "HORSE" fd.read.to_string.trim
 
   user := os.env.get "USER"
   if user:
+    cmd_list = ["$toit_exe tests/echo.toit \$USER"]
+    if platform == PLATFORM_WINDOWS: cmd_list = cmd_list[0].split " "
     expect_equals "$user"
-      (pipe.backticks shell + ["$toit_exe tests/echo.toit \$USER"]).trim
+      (pipe.backticks shell + cmd_list).trim
     user_fd := pipe.from --environment={"USER": null} toit_exe "tests/echo.toit" "\$USER"
     expect_equals "" user_fd.read.to_string.trim
