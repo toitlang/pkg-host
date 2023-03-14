@@ -185,7 +185,7 @@ main args:
 long_running_sleep:
   pipe.run_program "sleep" "1000"
 
-/// Returns whether a path exists and is a regular file.
+/// Returns whether a path exists and is a character device.
 is_char_device name --follow_links/bool=true -> bool:
   stat := file.stat name --follow_links
   if not stat: return false

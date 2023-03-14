@@ -8,11 +8,6 @@ import host.os
 import host.file
 
 main args:
-  pathext := os.env.get "PATHEXT"
-  if pathext:
-    // Add the null extension so we can run Unix executables on Wine.
-    os.env["PATHEXT"] = pathext + ";."
-
   if args.size < 1:
     print "Usage: env_test.toit <toit_exe>"
     exit 1
