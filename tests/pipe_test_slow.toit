@@ -90,8 +90,8 @@ main args:
     a.add "$it"
 
   // If backticks doesn't clean up open file descriptors, this will run out of
-  // them.
-  2000.repeat:
+  // them.  Sadly, Windows is astonishingly slow at starting subprocesses.
+  (platform == PLATFORM_WINDOWS ? 100 : 2000).repeat:
     expect_equals
       ""
       pipe.backticks "true"
