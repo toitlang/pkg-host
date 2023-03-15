@@ -200,7 +200,7 @@ pipe_large_file:
   else if platform == PLATFORM_MACOS:
     md5sum = "md5"
   else:
-    md5sum = "md5sum"  // From environment.
+    md5sum = "md5sum"
   if md5sum:
     buffer := ByteArray 1024 * 10
     o := pipe.to [md5sum]
