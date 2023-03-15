@@ -384,6 +384,7 @@ A return value of zero indicates the program ran without errors.
 Uses the /bin/sh shell to parse the command, which is a single string.
 Arguments are split by the shell at unescaped whitespace.
   On Windows we just split at spaces, since the shell is not available.
+  For more complicated cases where this is insufficient, use $run_program.
 Throws an exception if the shell cannot be run, but otherwise returns the
   exit value of shell, which is the exit value of the program it ran.
 If the program run by the shell dies with a signal then the exit value is 128 +
