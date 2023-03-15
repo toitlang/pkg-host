@@ -18,8 +18,10 @@ main args:
 
   toit_exe := args[0]
 
-  if not file.is_file toit_exe:
-    print "Cannot find toit executable '$toit_exe'"
+  // Try to run the toit executable.
+  exception := catch: pipe.backticks toit_exe "--version"
+  if exception:
+    print "Running the given toit executable '$toit_exe' failed: $exception"
     exit 1
 
   pipe.system "$toit_exe tests/echo.toit FOO=\$FOO"
