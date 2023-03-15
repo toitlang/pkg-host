@@ -35,10 +35,6 @@ external_test args:
 
   toit_exe := args[0]
 
-  if not file.is_file toit_exe:
-    print "Cannot find toit executable '$toit_exe'"
-    exit 1
-
   pipe.system "$toit_exe tests/echo.toit FOO=\$FOO"
   pipe.system --environment={"FOO": 123} "$toit_exe tests/echo.toit FOO=\$FOO"
 
