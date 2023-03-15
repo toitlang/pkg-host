@@ -192,9 +192,18 @@ is_char_device name --follow_links/bool=true -> bool:
   return stat[file.ST_TYPE] == file.CHARACTER_DEVICE
 
 pipe_large_file:
-  if (file.is_file "/bin/sh") and (file.is_file "/usr/bin/cat") and (is_char_device "/dev/null"):
+  md5sum/string? := null
+  if platform == PLATFORM_WINDOWS:
+    GIT_MD5SUM := "c:/Program Files/Git/usr/bin/md5sum.exe"
+    if file.is_file GIT_MD5SUM:
+      md5sum = GIT_MD5SUM
+  else if platform == PLATFORM_MACOS:
+    md5sum = "md5"
+  else:
+    md5sum = "md5sum"  // From environment.
+  if md5sum:
     buffer := ByteArray 1024 * 10
-    o := pipe.to ["/bin/sh", "-c", "/usr/bin/cat > /dev/null"]
+    o := pipe.to [md5sum]
     for i := 0; i < 100; i++:
       o.write buffer
     o.close
