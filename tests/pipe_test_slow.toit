@@ -62,9 +62,10 @@ main args:
   pipe_large_file
   write_closed_stdin_exception
 
-  expect_equals
-    0
-    pipe.system "true"
+  if file.is_file "/usr/bin/true":
+    expect_equals
+      0
+      pipe.system "/usr/bin/true"
 
   simple_ls_command := if_windows "dir %ComSpec%" "ls /bin/sh"
   expect_equals
@@ -89,8 +90,8 @@ main args:
     a.add "$it"
 
   // If backticks doesn't clean up open file descriptors, this will run out of
-  // them.
-  2000.repeat:
+  // them.  Sadly, Windows is astonishingly slow at starting subprocesses.
+  (platform == PLATFORM_WINDOWS ? 100 : 2000).repeat:
     expect_equals
       ""
       pipe.backticks "true"
@@ -184,17 +185,32 @@ main args:
 long_running_sleep:
   pipe.run_program "sleep" "1000"
 
+/// Returns whether a path exists and is a character device.
+is_char_device name --follow_links/bool=true -> bool:
+  stat := file.stat name --follow_links
+  if not stat: return false
+  return stat[file.ST_TYPE] == file.CHARACTER_DEVICE
+
 pipe_large_file:
-  if (file.is_file "/bin/sh") and (file.is_file "/usr/bin/cat"):
+  md5sum/string? := null
+  if platform == PLATFORM_WINDOWS:
+    GIT_MD5SUM := "c:/Program Files/Git/usr/bin/md5sum.exe"
+    if file.is_file GIT_MD5SUM:
+      md5sum = GIT_MD5SUM
+  else if platform == PLATFORM_MACOS:
+    md5sum = "md5"
+  else:
+    md5sum = "md5sum"
+  if md5sum:
     buffer := ByteArray 1024 * 10
-    o := pipe.to ["/bin/sh", "-c", "/usr/bin/cat > /dev/null"]
+    o := pipe.to [md5sum]
     for i := 0; i < 100; i++:
       o.write buffer
     o.close
 
 write_closed_stdin_exception:
   if file.is_file "/usr/bin/true":
-    stdin := pipe.to ["true"]
+    stdin := pipe.to ["/usr/bin/true"]
 
     expect_error "Broken pipe":
       while true:

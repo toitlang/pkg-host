@@ -1,2 +1,2 @@
 environment:
-  sdk: ^1.6.10
+  sdk: ^2.0.0-alpha.64
