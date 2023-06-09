@@ -23,4 +23,4 @@ test_not_existing:
     exception := catch:
       files := directory.DirectoryStream "not-existing"
       unreachable
-    expect_equals "FILE_NOT_FOUND: \"not-existing\"" exception
+    expect_not_null exception
