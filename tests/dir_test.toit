@@ -16,7 +16,7 @@ main args:
   test_not_existing
 
   5.repeat:
-    pipe.backticks toit_run "tests/dir_test.toit" "--run-test"
+    pipe.run_program toit_run "tests/dir_test.toit" "--run-test"
 
 test_not_existing:
   50.repeat:
