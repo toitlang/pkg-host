@@ -67,7 +67,10 @@ main:
     expect (file.is_directory "$tmp_dir/symlink_test/a")
     expect (file.is_directory "$tmp_dir/symlink_test/b")
     expect (file.is_directory "$tmp_dir/symlink_test/a/sym_b" --follow_links)
-    expect_not (file.is_directory "$tmp_dir/symlink_test/a/sym_b" --no-follow_links)
+    if platform != PLATFORM_WINDOWS:
+      // Git bash can support symlinks, but they need to be enabled in a configuration.
+      // The Github builders seem to have them disabled.
+      expect_not (file.is_directory "$tmp_dir/symlink_test/a/sym_b" --no-follow_links)
 
     // Recursive rmdir should not follow symlinks.
     directory.rmdir --recursive "$tmp_dir/symlink_test/a"
