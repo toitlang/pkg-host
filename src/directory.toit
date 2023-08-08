@@ -13,16 +13,20 @@ rmdir path/string -> none:
 
 /**
 Removes the directory and all its content.
+
+Does not follow symlinks, but removes the symlink itself.
 */
-rmdir --recursive/bool path/string -> none:
+rmdir path/string --recursive/bool -> none:
   if not recursive:
     rmdir path
     return
   stream := DirectoryStream path
   while entry := stream.next:
     child := "$path/$entry"
-    if file.is_directory child: rmdir --recursive child
-    else: file.delete child
+    if file.is_directory child --no-follow_links:
+      rmdir --recursive child
+    else:
+      file.delete child
   stream.close
   rmdir path
 
