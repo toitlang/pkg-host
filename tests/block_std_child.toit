@@ -10,15 +10,21 @@ main:
   in := pipe.stdin
   out := pipe.stdout
 
+  counter := 0
   task::
     // Repeat enough that this pipe will block until the parent reads
     // from stdout.
     1000.repeat:
       out.write "In the beginning the Universe was created.\n"
       out.write "This has made a lot of people very angry and been widely regarded as a bad move.\n"
+      counter++
     stderr.write "Done with stdout."
-  // Enough time for the other task to block.
-  sleep --ms=1000
+
+  // Loop until the other task blocks.
+  last_seen := -1
+  while last_seen != counter:
+    last_seen = counter
+    sleep --ms=10
 
   // If the whole process is blocked then this will not not be
   // printed.
