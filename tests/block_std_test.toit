@@ -48,3 +48,10 @@ main args:
   line = subprocess_stderr.read
   expect-equals "Done with stdout." line.to-string
   print "$line.to-string"
+
+  exit_value := pipe.wait_for pid
+  expect_equals 0
+    pipe.exit_code exit_value
+  expect_equals null
+    pipe.exit_signal exit_value
+  print "OK exit"
