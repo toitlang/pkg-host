@@ -40,14 +40,14 @@ main args:
   line := subprocess_stderr.read
   // If this gets the wrong message then the buffer on stdout is too big and we
   // need to increase the size of the loop in block_std_child.toit.
-  expect-equals "Message through stderr." line.to-string
-  print "$line.to-string"
+  expect_equals "Message through stderr." line.to_string
+  print "$line.to_string"
   task::
     while read := subprocess_stdout.read:
       null
   line = subprocess_stderr.read
-  expect-equals "Done with stdout." line.to-string
-  print "$line.to-string"
+  expect_equals "Done with stdout." line.to_string
+  print "$line.to_string"
 
   exit_value := pipe.wait_for pid
   expect_equals 0
