@@ -23,12 +23,17 @@ main args:
   toit_exe := args[0]
 
   // Try to run the toit executable.
+  /*
+  print "Trying to run $toit_exe"
   exception := catch: pipe.backticks toit_exe "--version"
   if exception:
     print "Running the given toit executable '$toit_exe' failed: $exception"
     exit 1
 
-  ["close", "read"].do: | action |
+  print "Managed to run $toit_exe"
+  */
+
+  [/*"close", */"read"].do: | action |
     subprocess := pipe.fork
       true  // use_path
       pipe.PIPE_CREATED   // stdin
@@ -36,6 +41,8 @@ main args:
       pipe.PIPE_INHERITED // stderr
       toit_exe
       [toit_exe, "tests/block_stdin_child.toit", action]
+
+    print "Started subprocess"
 
     subprocess_stdin  := subprocess[0]
     subprocess_stdout := subprocess[1]

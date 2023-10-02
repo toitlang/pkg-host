@@ -11,6 +11,8 @@ main args:
   out := pipe.stdout
   err := pipe.stderr
 
+  err.write "hello\n"
+
   task::
     // This blocks, but that should not block the whole VM.
     if closing_test:
@@ -18,6 +20,7 @@ main args:
       expect_equals null result
       err.write "Close woke up the task.\n"
     else:
+      err.write "Reading from stdin\n"
       err.write in.read.to_string
 
   sleep --ms=100
