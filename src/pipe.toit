@@ -94,8 +94,6 @@ class OpenPipe implements reader.Reader:
   write x from = 0 to = x.size:
     if input_ == CHILD_TO_PARENT_:
       throw "write to an input pipe"
-    if not state_:
-      throw "ALREADY_CLOSED"
     state_.wait_for_state WRITE_EVENT_ | ERROR_EVENT_
     bytes_written := write_primitive_ resource_ x from to
     if bytes_written == 0: state_.clear_state WRITE_EVENT_

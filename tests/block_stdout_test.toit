@@ -45,8 +45,9 @@ main args:
     print "Waiting for read of child stderr."
     line := subprocess_stderr.read
     // If this gets the wrong message then the buffer on stdout is too big and
-    // we need to increase the size of the loop in block_std_child.toit.
+    // we need to increase the size of the loop in block_stdout_child.toit.
     if action == "close":
+      if line != null: print "<$line.to_string>"
       expect_equals null line
       print "Close woke up the task."
     else:

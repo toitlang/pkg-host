@@ -23,7 +23,6 @@ main args:
   toit_exe := args[0]
 
   // Try to run the toit executable.
-  /*
   print "Trying to run $toit_exe"
   exception := catch: pipe.backticks toit_exe "--version"
   if exception:
@@ -31,9 +30,8 @@ main args:
     exit 1
 
   print "Managed to run $toit_exe"
-  */
 
-  [/*"close", */"read"].do: | action |
+  ["close", "read"].do: | action |
     subprocess := pipe.fork
       true  // use_path
       pipe.PIPE_CREATED   // stdin
