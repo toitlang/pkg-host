@@ -134,6 +134,7 @@ class DirectoryStream:
     if not dir: return
     dir_ = null
     closedir_ dir
+    remove_finalizer this
 
 opendir_ resource_group name:
   #primitive.file.opendir2
