@@ -13,6 +13,13 @@ jobs:
         # The versions should contain (at least) the lowest requirement
         #    and a version that is more up to date.
         toit-version: [ v2.0.0-alpha.94, v2.0.0-alpha.114 ]
+        include:
+          - toit-version: v2.0.0-alpha.94
+            version-name: old
+          - toit-version: v2.0.0-alpha.114
+            version-name: new
+
+    name: CI - ${{ matrix.os }} - ${{ matrix.version-name }}
 
     runs-on: ${{ matrix.os }}
 
