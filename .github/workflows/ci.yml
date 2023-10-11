@@ -12,7 +12,7 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         # The versions should contain (at least) the lowest requirement
         #    and a version that is more up to date.
-        toit-version: [ v2.0.0-alpha.65, v2.0.0-alpha.86 ]
+        toit-version: [ v2.0.0-alpha.65, v2.0.0-alpha.114 ]
 
     runs-on: ${{ matrix.os }}
 

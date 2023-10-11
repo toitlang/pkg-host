@@ -249,20 +249,20 @@ windows_escape_ path/string -> string:
   accumulator.write_byte '"'  // Final double quote.
   return accumulator.bytes.to_string
 
-/// Alternative to $(to arguments).
-to --environment/Map?=null command arg1:
+/// Variant of $(to arguments).
+to --environment/Map?=null command arg1 -> OpenPipe:
   return to --environment=environment [command, arg1]
 
-/// Alternative to $(to arguments).
-to --environment/Map?=null command arg1 arg2:
+/// Variant of $(to arguments).
+to --environment/Map?=null command arg1 arg2 -> OpenPipe:
   return to --environment=environment [command, arg1, arg2]
 
-/// Alternative to $(to arguments).
-to --environment/Map?=null command arg1 arg2 arg3:
+/// Variant of $(to arguments).
+to --environment/Map?=null command arg1 arg2 arg3 -> OpenPipe:
   return to --environment=environment [command, arg1, arg2, arg3]
 
-/// Alternative to $(to arguments).
-to --environment/Map?=null command arg1 arg2 arg3 arg4:
+/// Variant of $(to arguments).
+to --environment/Map?=null command arg1 arg2 arg3 arg4 -> OpenPipe:
   return to --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -277,7 +277,7 @@ The close method on the returned writer will throw an exception if the
   child process crashes or exits with a non-zero exit code.
 The $environment argument is used as in $fork.
 */
-to --environment/Map?=null arguments:
+to --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
     return to [arguments]
   pipe_ends := OpenPipe true --child_process_name=arguments[0]
@@ -286,20 +286,20 @@ to --environment/Map?=null arguments:
   pipe_ends.pid = pipes[3]
   return pipe_ends
 
-/// Alternative to $(from arguments).
-from --environment/Map?=null command arg1:
+/// Variant of $(from arguments).
+from --environment/Map?=null command arg1 -> OpenPipe:
   return from --environment=environment [command, arg1]
 
-/// Alternative to $(from arguments).
-from --environment/Map?=null command arg1 arg2:
+/// Variant of $(from arguments).
+from --environment/Map?=null command arg1 arg2 -> OpenPipe:
   return from --environment=environment [command, arg1, arg2]
 
-/// Alternative to $(from arguments).
-from --environment/Map?=null command arg1 arg2 arg3:
+/// Variant of $(from arguments).
+from --environment/Map?=null command arg1 arg2 arg3 -> OpenPipe:
   return from --environment=environment [command, arg1, arg2, arg3]
 
-/// Alternative to $(from arguments).
-from --environment/Map?=null command arg1 arg2 arg3 arg4:
+/// Variant of $(from arguments).
+from --environment/Map?=null command arg1 arg2 arg3 arg4 -> OpenPipe:
   return from --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -315,7 +315,7 @@ The read method on the reader throws an exception if the process crashes or
   has a non-zero exit code.
 The $environment argument is used as in $fork.
 */
-from --environment/Map?=null arguments:
+from --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
     return from [arguments]
   pipe_ends := OpenPipe false --child_process_name=arguments[0]
@@ -324,19 +324,19 @@ from --environment/Map?=null arguments:
   pipe_ends.pid = pipes[3]
   return pipe_ends
 
-/// Alternative to $(backticks arguments).
+/// Variant of $(backticks arguments).
 backticks --environment/Map?=null command arg1 -> string:
   return backticks --environment=environment [command, arg1]
 
-/// Alternative to $(backticks arguments).
+/// Variant of $(backticks arguments).
 backticks --environment/Map?=null command arg1 arg2 -> string:
   return backticks --environment=environment [command, arg1, arg2]
 
-/// Alternative to $(backticks arguments).
+/// Variant of $(backticks arguments).
 backticks --environment/Map?=null command arg1 arg2 arg3 -> string:
   return backticks --environment=environment [command, arg1, arg2, arg3]
 
-/// Alternative to $(backticks arguments).
+/// Variant of $(backticks arguments).
 backticks --environment/Map?=null command arg1 arg2 arg3 arg4 -> string:
   return backticks --environment=environment [command, arg1, arg2, arg3, arg4]
 
@@ -397,19 +397,19 @@ system --environment/Map?=null command -> int?:
   else:
     return run_program --environment=environment ["/bin/sh", "-c", command]
 
-/// Alternative to $(run_program arguments).
+/// Variant of $(run_program arguments).
 run_program --environment/Map?=null command arg1 -> int?:
   return run_program [command, arg1]
 
-/// Alternative to $(run_program arguments).
+/// Variant of $(run_program arguments).
 run_program --environment/Map?=null command arg1 arg2 -> int?:
   return run_program [command, arg1, arg2]
 
-/// Alternative to $(run_program arguments).
+/// Variant of $(run_program arguments).
 run_program --environment/Map?=null command arg1 arg2 arg3 -> int?:
   return run_program [command, arg1, arg2, arg3]
 
-/// Alternative to $(run_program arguments).
+/// Variant of $(run_program arguments).
 run_program --environment/Map?=null command arg1 arg2 arg3 arg4 -> int?:
   return run_program [command, arg1, arg2, arg3, arg4]
 

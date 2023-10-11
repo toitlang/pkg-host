@@ -13,16 +13,20 @@ rmdir path/string -> none:
 
 /**
 Removes the directory and all its content.
+
+Does not follow symlinks, but removes the symlink itself.
 */
-rmdir --recursive/bool path/string -> none:
+rmdir path/string --recursive/bool -> none:
   if not recursive:
     rmdir path
     return
   stream := DirectoryStream path
   while entry := stream.next:
     child := "$path/$entry"
-    if file.is_directory child: rmdir --recursive child
-    else: file.delete child
+    if file.is_directory child --no-follow_links:
+      rmdir --recursive child
+    else:
+      file.delete child
   stream.close
   rmdir path
 
@@ -88,34 +92,49 @@ chdir name:
 
 // An open directory, used to iterate over the named entries in a directory.
 class DirectoryStream:
-  dir_ := ?
+  dir_ := null
+  is_closed_/bool := false
 
   constructor name:
-    dir_ = null
     error := catch:
       dir_ = opendir_ resource_freeing_module_ name
-    if error:
-      if error is string:
-        throw "$error: \"$name\""
+    if error is string:
+      throw "$error: \"$name\""
+    else if error:
       throw error
+    add-finalizer this:: dispose_
 
   /**
   Returns a string with the next name from the directory.
   The '.' and '..' entries are skipped and never returned.
-  Returns null when no entry is left.
+  Returns null when no entries are left.
   */
   next -> string?:
+    if is_closed_: throw "ALREADY_CLOSED"
+    // We automatically dispose the underlying resource when
+    // we reach the end of the stream. In that case, we return
+    // null because we know that no more entries are left.
+    dir := dir_
+    if not dir: return null
     while true:
-      byte_array := readdir_ dir_
-      if not byte_array: return null
-      str := byte_array.to_string
+      bytes/ByteArray? := readdir_ dir
+      if not bytes:
+        dispose_
+        return null
+      str := bytes.to_string
       if str == "." or str == "..": continue
       return str
 
   close -> none:
-    if dir_:
-      closedir_ dir_
-      dir_ = null
+    is_closed_ = true
+    dispose_
+
+  dispose_ -> none:
+    dir := dir_
+    if not dir: return
+    dir_ = null
+    closedir_ dir
+    remove_finalizer this
 
 opendir_ resource_group name:
   #primitive.file.opendir2
