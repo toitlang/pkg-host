@@ -8,6 +8,7 @@ import host.directory show *
 import host.file
 import host.pipe
 import host.pipe show windows_escape_
+import semver
 
 test_exit_value command args expected_exit_value sleep_time/int:
   complete_args := [command] + args
@@ -54,6 +55,10 @@ test_exit_signal sleep_time/int:
   expect_equals SIGKILL (pipe.exit_signal exit_value)
 
 main:
+  if platform == "Windows" and (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
+    print "This test requires a newer version of the SDK."
+    exit 0
+
   test_windows_escaping
 
   // This test does not work on ESP32 since you can't launch subprocesses.
