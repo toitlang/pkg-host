@@ -1,5 +1,11 @@
 prefixes:
   host: ..
+  semver: toit-semver
 packages:
   ..:
     path: ..
+  toit-semver:
+    url: github.com/toitware/toit-semver
+    name: semver
+    version: 1.1.0
+    hash: a681bad211f7d4803dfdc2a0068706559458274e
