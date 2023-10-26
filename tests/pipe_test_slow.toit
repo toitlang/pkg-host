@@ -21,9 +21,9 @@ expect_file_not_found cmd [code]:
       expect_error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
   else:
     if platform == PLATFORM_WINDOWS:
-      expect_error "Error trying to run executable with a space in the filename: '$cmd': FILE_NOT_FOUND" code
+      expect_error "Error trying to run executable (arguments appended to filename?): '$cmd': FILE_NOT_FOUND" code
     else:
-      expect_error "Error trying to run executable with a space in the filename: '$cmd': No such file or directory" code
+      expect_error "Error trying to run executable (arguments appended to filename?): '$cmd': No such file or directory" code
 
 if_windows windows unix:
   if platform == PLATFORM_WINDOWS: return windows

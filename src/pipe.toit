@@ -210,7 +210,7 @@ fork use_path stdin stdout stderr command arguments -> List
       result[2].close
       file.close_ stderr
     if (command.index_of " ") != -1:
-      throw "Error trying to run executable with a space in the filename: '$command': $exception"
+      throw "Error trying to run executable (arguments appended to filename?): '$command': $exception"
     else:
       clarification := ""
       if command.size > 0 and command[0] != '/':
