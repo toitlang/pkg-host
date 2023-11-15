@@ -5,6 +5,7 @@
 // Manipulation of directories on a filesystem.  Currently not available on
 // embedded targets.  Names work best when imported with "show *".
 
+import system
 import .file as file
 
 /** Removes an empty directory. */
@@ -151,7 +152,7 @@ same_entry_ a b:
 
 is_absolute_ path:
   if path.starts_with "/": return true
-  if platform == PLATFORM_WINDOWS:
+  if system.platform == system.PLATFORM_WINDOWS:
     if path.starts_with "//" or path.starts_with "\\\\": return true
     if path.size >= 3 and path[1] == ':': return true
   return false

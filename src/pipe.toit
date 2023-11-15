@@ -7,6 +7,7 @@ import .file as file
 import reader
 import monitor
 import writer show Writer
+import system as sdk-system
 
 process_resource_group_ ::= process_init_
 pipe_resource_group_ ::= pipe_init_
@@ -177,7 +178,7 @@ fork use_path stdin stdout stderr command arguments -> List
     --environment/Map?=null
     --file_descriptor_3/OpenPipe?=null
     --file_descriptor_4/OpenPipe?=null:
-  if platform == PLATFORM_WINDOWS:
+  if sdk-system.platform == sdk-system.PLATFORM_WINDOWS:
     arguments = arguments.map: windows_escape_ it
   result := List 4
   flat_environment := environment ? (Array_ environment.size * 2) : null
@@ -392,7 +393,7 @@ If the program run by the shell dies with a signal then the exit value is 128 +
 The $environment argument is used as in $fork.
 */
 system --environment/Map?=null command -> int?:
-  if platform == PLATFORM_WINDOWS:
+  if sdk-system.platform == sdk-system.PLATFORM_WINDOWS:
     return run_program --environment=environment ["cmd", "/s", "/c"] + (command.split " ")
   else:
     return run_program --environment=environment ["/bin/sh", "-c", command]
