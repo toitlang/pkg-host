@@ -12,11 +12,11 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         # The versions should contain (at least) the lowest requirement
         #    and a version that is more up to date.
-        toit-version: [ v2.0.0-alpha.120, v2.0.0-alpha.120 ]
+        toit-version: [ v2.0.0-alpha.120, v2.0.0-alpha.121 ]
         include:
           - toit-version: v2.0.0-alpha.120
             version-name: old
-          - toit-version: v2.0.0-alpha.120
+          - toit-version: v2.0.0-alpha.121
             version-name: new
 
     name: CI - ${{ matrix.os }} - ${{ matrix.version-name }}
