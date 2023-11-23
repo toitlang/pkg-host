@@ -4,9 +4,9 @@
 
 import bytes
 import .file as file
-import reader
+import io
 import monitor
-import writer show Writer
+import reader as old-reader
 import system as sdk-system
 
 process_resource_group_ ::= process_init_
@@ -43,7 +43,7 @@ get_standard_pipe_ fd/int:
 A program may be executed with an open file descriptor.  This is similar
   to the technique used by the shell to launch programs with their stdin,
   stdout and stderr attached to pipes or files.  Given the number of
-  the file descriptor this function will return a $reader.Reader or writer
+  the file descriptor this function will return a $old-reader.Reader or writer
   object.  You are expected to know which direction the file descriptor has.
 */
 get_numbered_pipe fd/int:
@@ -54,7 +54,7 @@ get_numbered_pipe fd/int:
   else:
     return OpenPipe.from_std_ (fd_to_pipe_ pipe_resource_group_ fd)
 
-class OpenPipe implements reader.Reader:
+class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.Reader:
   resource_ := ?
   state_ := ?
   pid := null
@@ -77,7 +77,13 @@ class OpenPipe implements reader.Reader:
     child_process_name_ = null
     state_ = monitor.ResourceState_ pipe_resource_group_ resource_
 
+  /**
+  Deprecated. Use 'read' on $in instead.
+  */
   read -> ByteArray?:
+    return in.read
+
+  consume_ -> ByteArray?:
     if input_ == PARENT_TO_CHILD_:
       throw "read from an output pipe"
     while true:
@@ -92,11 +98,17 @@ class OpenPipe implements reader.Reader:
         return result
       state_.clear_state READ_EVENT_
 
+  /**
+  Deprecated. Use 'write' or 'try-write' on $out instead.
+  */
   write x from = 0 to = x.size:
+    return try-write_ x from to
+
+  try-write_ data/io.Data from/int to/int -> int:
     if input_ == CHILD_TO_PARENT_:
       throw "write to an input pipe"
     state_.wait_for_state WRITE_EVENT_ | ERROR_EVENT_
-    bytes_written := write_primitive_ resource_ x from to
+    bytes_written := write_primitive_ resource_ data from to
     if bytes_written == 0: state_.clear_state WRITE_EVENT_
     return bytes_written
 
@@ -134,8 +146,15 @@ pipe_init_:
 create_pipe_ resource_group input/bool:
   #primitive.pipe.create_pipe
 
-write_primitive_ pipe x from to:
-  #primitive.pipe.write
+write_primitive_ pipe data/io.Data from to:
+  #primitive.pipe.write: | error |
+    written := 0
+    io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
+      chunk-written := write_primitive_ pipe chunk 0 chunk.size
+      written += chunk-written
+      if chunk-written < chunk.size: return written
+    return written
+
 
 read_ pipe:
   #primitive.pipe.read
@@ -357,9 +376,8 @@ backticks --environment/Map?=null arguments -> string:
   stdout := pipe_ends.fd
   pipes := fork --environment=environment true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
   child_process := pipes[3]
-  reader := reader.BufferedReader pipe_ends
-  reader.buffer_all
-  output := reader.read_string (reader.buffered)
+  pipe_ends.in.buffer-all
+  output := pipe_ends.in.read-string (pipe_ends.in.buffered-size)
   try:
     check_exit_ child_process arguments[0]
   finally:
@@ -476,7 +494,7 @@ exit_signal exit_value/int -> int?:
 
 // Temporary method, until printing to stdout is easier without allocating a `Writer`.
 print_to_ pipe msg/string:
-  writer := Writer pipe
+  writer/io.Writer := pipe.out
   writer.write msg
   writer.write "\n"
 
