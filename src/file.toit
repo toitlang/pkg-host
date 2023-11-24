@@ -5,8 +5,6 @@
 import reader show Reader
 import writer show Writer
 
-import system
-
 import .directory
 
 // Manipulation of files on a filesystem.
@@ -204,8 +202,7 @@ is_file name --follow_links/bool=true -> bool:
 is_directory name --follow_links/bool=true -> bool:
   stat := stat_ name follow_links
   if not stat: return false
-  return stat[ST_TYPE] == DIRECTORY or
-         stat[ST_TYPE] == DIRECTORY_SYMBOLIC_LINK
+  return stat[ST_TYPE] == DIRECTORY
 
 /**
 Returns the file size in bytes or null for no such file.
