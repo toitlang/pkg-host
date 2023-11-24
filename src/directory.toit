@@ -24,8 +24,11 @@ rmdir path/string --recursive/bool -> none:
   stream := DirectoryStream path
   while entry := stream.next:
     child := "$path/$entry"
-    if file.is_directory child --no-follow_links:
+    type := (file.stat --no-follow_links child)[file.ST_TYPE]
+    if type == file.DIRECTORY:
       rmdir --recursive child
+    else if type == file.DIRECTORY_SYMBOLIC_LINK:
+      rmdir child // Windows special handling of symbolic links to a directory
     else:
       file.delete child
   stream.close

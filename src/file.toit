@@ -5,8 +5,12 @@
 import reader show Reader
 import writer show Writer
 
-// Manipulation of files on a filesystem.  Currently not available on embedded
-// targets.  Names work best when imported without "show *".
+import system
+
+import .directory
+
+// Manipulation of files on a filesystem.
+// Names work best when imported without "show *".
 
 // Flags for file.Stream second constructor argument.  Analogous to the
 // second argument to the open() system call.
@@ -54,6 +58,11 @@ REGULAR_FILE ::= 4
 SYMBOLIC_LINK ::= 5
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
+/**
+The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a
+  symlink to a directory. (Windows only).
+*/
+DIRECTORY_SYMBOLIC_LINK ::= 7
 
 /**
 An open file with a current position.  Corresponds in many ways to a file
@@ -195,7 +204,8 @@ is_file name --follow_links/bool=true -> bool:
 is_directory name --follow_links/bool=true -> bool:
   stat := stat_ name follow_links
   if not stat: return false
-  return stat[ST_TYPE] == DIRECTORY
+  return stat[ST_TYPE] == DIRECTORY or
+         stat[ST_TYPE] == DIRECTORY_SYMBOLIC_LINK
 
 /**
 Returns the file size in bytes or null for no such file.
@@ -251,9 +261,58 @@ Deletes a file, given its name.
 delete name/string -> none:
   #primitive.file.unlink
 
-/*
+/**
 Renames a file or directory.
 Only works if the $to name is on the same filesystem.
 */
 rename from/string to/string -> none:
   #primitive.file.rename
+
+/** Flag for $link indicating a hard link */
+LINK_TYPE_HARD                        ::= 0
+/** Flag for $link indicating a symbolic link on Posix */
+LINK_TYPE_SYMBOLIC                    ::= 1
+/** Flag for $link indicating a symbolic link for a file on Windows */
+LINK_TYPE_SYMBOLIC_WINDOWS_FILE       ::= 1
+/** Flag for $link indicating a symbolic link for a directory on Windows */
+LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY  ::= 2
+
+/**
+Creates a link from $source to $target. Set type to one of the
+  LINK_TYPE_* constants. On Posix LINK_TYPE_FILE and LINK_TYPE_DIRECTORY are
+  equivalent
+*/
+link source/string target/string type/int -> none:
+  if not is_absolute_ source:
+    source = "$cwd/$source"
+
+  if not is_absolute_ target:
+    target = "$cwd/$target"
+
+  link_ source target type
+
+link_ source/string target/string type/int -> none:
+  #primitive.file.link
+
+/**
+Reads the destination of the link $name
+*/
+readlink name/string -> string:
+  #primitive.file.readlink
+
+/** Windows specific attribute for read-only files */
+WINDOWS-FILE-ATTRIBUTE-READONLY ::= 0x01
+/** Windows specific attribute for hidden files */
+WINDOWS-FILE-ATTRIBUTE-HIDDEN   ::= 0x02
+/** Windows specific attribute for system files */
+WINDOWS-FILE-ATTRIBUTE-SYSTEM   ::= 0x04
+/** Windows specific attribute for normal files */
+WINDOWS-FILE-ATTRIBUTE-NORMAL   ::= 0x80
+/** Windows specific attribute for archive files */
+WINDOWS-FILE-ATTRIBUTE-ARCHIVE  ::= 0x20
+
+/**
+Changes filesystem permissions for the file $name to $permissions.
+*/
+chmod name/string permissions/int:
+  #primitive.file.chmod
