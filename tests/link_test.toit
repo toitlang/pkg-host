@@ -21,19 +21,12 @@ main:
   directory.mkdir "test-dir"
 
   try:
-    file.link "test-file-hard-link" "test-file" file.LINK_TYPE_HARD
+    file.link --hard --source="test-file-hard-link" --target="test-file"
     expect-equals true (file.is_file "test-file-hard-link")
-    if system.platform == system.PLATFORM_WINDOWS:
-      file.link "test-file-soft-link" "test-file" file.LINK_TYPE_SYMBOLIC_WINDOWS_FILE
-      expect-equals true ((file.readlink "test-file-soft-link").ends_with "test-file")
-      file.link "test-dir-soft-link" "test-dir" file.LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY
-      expect-equals true ((file.readlink "test-dir-soft-link").ends_with "test-dir")
-    else:
-      file.link "test-file-soft-link" "test-file" file.LINK_TYPE_SYMBOLIC
-      file.link "test-dir-soft-link" "test-dir" file.LINK_TYPE_SYMBOLIC
-
-      expect-equals true ((file.readlink "test-file-soft-link").ends_with "test-file")
-      expect-equals true ((file.readlink "test-dir-soft-link").ends_with "test-dir")
+    file.link --soft --source="test-file-soft-link" --target="test-file"
+    expect-equals true ((file.readlink "test-file-soft-link").ends_with "test-file")
+    file.link --source="test-dir-soft-link" --target="test-dir"
+    expect-equals true ((file.readlink "test-dir-soft-link").ends_with "test-dir")
 
     file_stat := file.stat "test-file"
     expect-equals file_stat (file.stat "test-file-hard-link")

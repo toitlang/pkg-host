@@ -5,6 +5,7 @@
 import reader show Reader
 import writer show Writer
 
+import system
 import .directory
 
 // Manipulation of files on a filesystem.
@@ -265,30 +266,55 @@ Only works if the $to name is on the same filesystem.
 rename from/string to/string -> none:
   #primitive.file.rename
 
-/** Flag for $link indicating a hard link */
-LINK_TYPE_HARD                        ::= 0
-/** Flag for $link indicating a symbolic link on Posix */
-LINK_TYPE_SYMBOLIC                    ::= 1
-/** Flag for $link indicating a symbolic link for a file on Windows */
-LINK_TYPE_SYMBOLIC_WINDOWS_FILE       ::= 1
-/** Flag for $link indicating a symbolic link for a directory on Windows */
-LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY  ::= 2
+/**
+Creates a hard link from $source to $target.
+*/
+link --hard --source/string --target/string -> none:
+  if not hard: throw "INVALID_ARGUMENT"
+  link_ source target LINK_TYPE_HARD_
 
 /**
-Creates a link from $source to $target. Set type to one of the
-  LINK_TYPE_* constants. On Posix LINK_TYPE_FILE and LINK_TYPE_DIRECTORY are
-  equivalent
+Creates a soft link from $source to $target.
+  Note: On Posix systems this works for both directories and files.
+  On Windows systems this works only for file links.
 */
-link source/string target/string type/int -> none:
+link --soft --source/string --target/string -> none:
+  if not soft: throw "INVALID_ARGUMENT"
+  link_ source target LINK_TYPE_SYMBOLIC_
+
+/**
+Creates a soft directory link from $source to $target. (For the windows platform).
+*/
+link --soft-dir --source/string --target/string -> none:
+  if not soft-dir or system.platform != system.PLATFORM-WINDOWS: throw "INVALID_ARGUMENT"
+  link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+
+/**
+Creates a symbolic link from $source to $target. This version of link requires that the $target exists.
+  It will automatically choose the correct version of link based on the type of $target and the host platform
+*/
+link --source/string --target/string -> none:
+  if not stat target: throw "INVALID_ARGUMENT"
+  if is_directory target and system.platform == system.PLATFORM-WINDOWS:
+    link --soft-dir --source=source --target=target
+  else:
+    link --soft --source=source --target=target
+
+
+LINK_TYPE_HARD_                       ::= 0
+LINK_TYPE_SYMBOLIC_                   ::= 1
+LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_ ::= 2
+
+link_ source/string target/string type/int:
   if not is_absolute_ source:
     source = "$cwd/$source"
 
   if not is_absolute_ target:
     target = "$cwd/$target"
 
-  link_ source target type
+  primitive_link_ source target type
 
-link_ source/string target/string type/int -> none:
+primitive_link_ source/string target/string type/int -> none:
   #primitive.file.link
 
 /**

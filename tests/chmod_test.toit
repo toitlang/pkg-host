@@ -32,11 +32,11 @@ main:
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-SYSTEM
       expect_equals file.WINDOWS-FILE-ATTRIBUTE-SYSTEM (file.stat "test")[file.ST_MODE]
     else:
-      file.chmod "test" 0b100100100
+      file.chmod "test" 0b100_100_100
       expect_equals 0b100100100 (file.stat "test")[file.ST_MODE]
-      file.chmod "test" 0b100000000
+      file.chmod "test" 0b100_000_000
       expect_equals 0b100000000 (file.stat "test")[file.ST_MODE]
-      file.chmod "test" 0b110000000
-      expect_equals 0b110000000 (file.stat "test")[file.ST_MODE]
+      file.chmod "test" 0b110_000_000
+      expect_equals 0b110_000_000 (file.stat "test")[file.ST_MODE]
   finally:
     directory.rmdir tmp_dir --recursive
