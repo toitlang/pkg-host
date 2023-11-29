@@ -285,9 +285,12 @@ link --soft --source/string --target/string -> none:
 /**
 Creates a soft directory link from $source to $target. (For the windows platform).
 */
-link --soft-dir --source/string --target/string -> none:
-  if not soft-dir or system.platform != system.PLATFORM-WINDOWS: throw "INVALID_ARGUMENT"
-  link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+link --soft-directory --source/string --target/string -> none:
+  if not soft-directory: throw "INVALID_ARGUMENT"
+  if system.platform == system.PLATFORM-WINDOWS:
+    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+  else:
+    link_ source target LINK_TYPE_SYMBOLIC_
 
 /**
 Creates a symbolic link from $source to $target. This version of link requires that the $target exists.
@@ -296,25 +299,15 @@ Creates a symbolic link from $source to $target. This version of link requires t
 link --source/string --target/string -> none:
   if not stat target: throw "INVALID_ARGUMENT"
   if is_directory target and system.platform == system.PLATFORM-WINDOWS:
-    link --soft-dir --source=source --target=target
+    link --soft-directory --source=source --target=target
   else:
     link --soft --source=source --target=target
-
 
 LINK_TYPE_HARD_                       ::= 0
 LINK_TYPE_SYMBOLIC_                   ::= 1
 LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_ ::= 2
 
-link_ source/string target/string type/int:
-  if not is_absolute_ source:
-    source = "$cwd/$source"
-
-  if not is_absolute_ target:
-    target = "$cwd/$target"
-
-  primitive_link_ source target type
-
-primitive_link_ source/string target/string type/int -> none:
+link_ source/string target/string type/int -> none:
   #primitive.file.link
 
 /**

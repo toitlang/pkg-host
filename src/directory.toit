@@ -8,6 +8,15 @@
 import system
 import .file as file
 
+/**
+The dir separator for the underlying operating system.
+*/
+dir-separator -> string:
+  if system.platform == system.PLATFORM-WINDOWS:
+    return "\\"
+  else:
+    return "/"
+
 /** Removes an empty directory. */
 rmdir path/string -> none:
   #primitive.file.rmdir

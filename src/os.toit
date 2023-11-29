@@ -2,6 +2,8 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import system
+
 /**
 The environment variables of the system.
 
@@ -55,6 +57,16 @@ A map-like object that represents the environment variables of the current
   process.
 */
 env / EnvironmentVariableMap ::= EnvironmentVariableMap.private_
+
+/**
+The path separator for the underlying operating system.
+*/
+path-separator -> string:
+  if system.platform == system.PLATFORM-FREERTOS: throw "UNSUPPORTED"
+  if system.platform == system.PLATFORM-WINDOWS:
+    return ";"
+  else:
+    return ":"
 
 get_env_ key/string -> string?:
   #primitive.core.get_env
