@@ -42,18 +42,18 @@ main:
     expect-equals CONTENT.to_byte_array (file.read_content "test-file-hard-link")
     expect-equals CONTENT.to_byte_array (file.read_content "test-file-soft-link")
 
-    // Test that relative soft-links are relative to the source
+    // Test that relative soft-links are relative to the source.
     file.link --soft --source="test-dir/relative" --target="relative-soft-name"
     expect-equals "relative-soft-name" (file.readlink "test-dir/relative")
     file.link --soft --source="test-dir/relative-soft-name" --target="..$(directory.dir-separator)test-file"
     expect-equals "..$(directory.dir-separator)test-file" (file.readlink "test-dir/relative-soft-name")
     expect-equals CONTENT.to_byte_array (file.read_content "test-dir/relative")
 
-    // Test that hardlinks are always relative to cwd
+    // Test that hardlinks are always relative to cwd.
     file.link --hard --source="test-dir/relative-hard" --target="test-file"
     expect-equals CONTENT.to_byte_array (file.read_content "test-dir/relative-hard")
 
-    // Test that hard-links behaves as hard-link and soft-link behaves as soft-links
+    // Test that hard-links behaves as hard-link and soft-link behaves as soft-links.
     file.delete "test-file"
     expect-equals CONTENT.to_byte_array (file.read_content "test-file-hard-link")
     expect-throw "FILE_NOT_FOUND: \"test-file-soft-link\"" : file.read_content "test-file-soft-link"
