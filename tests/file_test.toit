@@ -6,6 +6,8 @@ import expect show *
 
 import host.file
 import host.directory show *
+
+import system
 import writer show Writer
 
 expect_ name [code]:
@@ -26,13 +28,13 @@ expect_already_closed [code]:
 
 main:
   // This test does not work on ESP32 since there is no file system!
-  if platform == "FreeRTOS": return
+  if system.platform == "FreeRTOS": return
 
   expect_file_not_found: file.Stream.for_read "mkfxz.not_there"
   expect_file_not_found: file.Stream "mkfxz.not_there" file.RDONLY
   expect_invalid_argument: file.Stream "any name" file.CREAT       // Can't create a file without permissions.
 
-  nul_device := (platform == PLATFORM_WINDOWS ? "\\\\.\\NUL" : "/dev/null")
+  nul_device := (system.platform == system.PLATFORM_WINDOWS ? "\\\\.\\NUL" : "/dev/null")
   open_file := file.Stream.for_read nul_device
   byte_array := open_file.read
   expect (not byte_array)
@@ -124,7 +126,7 @@ main:
       expect (not file.size filename)
 
       // Permissions does not quite work on windows
-      if platform != PLATFORM_WINDOWS:
+      if system.platform != system.PLATFORM_WINDOWS:
         try:
           file.write_content test_contents --path=filename --permissions=(6 << 6)
           read_back := (file.read_content filename).to_string
@@ -140,14 +142,12 @@ main:
 
       cwd_path := cwd
 
-      path_sep := platform == PLATFORM_WINDOWS ? "\\" : "/"
-
       chdir dirname
-      expect_equals "$cwd_path$path_sep$dirname" cwd
+      expect_equals "$cwd_path$directory-separator$dirname" cwd
 
-      expect_equals "$cwd_path$path_sep$dirname" (realpath ".")
+      expect_equals "$cwd_path$directory-separator$dirname" (realpath ".")
       expect_equals "$cwd_path" (realpath "..")
-      expect_equals "$cwd_path$path_sep$dirname" (realpath "../$dirname")
+      expect_equals "$cwd_path$directory-separator$dirname" (realpath "../$dirname")
       expect_equals "$cwd_path" (realpath "../$dirname/..")
       expect_equals null (realpath "fætter");
 

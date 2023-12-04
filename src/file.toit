@@ -57,10 +57,7 @@ REGULAR_FILE ::= 4
 SYMBOLIC_LINK ::= 5
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
-/**
-The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a
-  symlink to a directory. (Windows only).
-*/
+/// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a symlink to a directory. (Windows only).
 DIRECTORY_SYMBOLIC_LINK ::= 7
 
 /**
@@ -277,13 +274,17 @@ link --hard --source/string --target/string -> none:
 Creates a soft link from $source to $target.
   Note: On Posix systems this works for both directories and files.
   On Windows systems this works only for file links.
+
+Not available on embedded systems.
 */
 link --soft --source/string --target/string -> none:
   if not soft: throw "INVALID_ARGUMENT"
   link_ source target LINK_TYPE_SYMBOLIC_
 
 /**
-Creates a soft directory link from $source to $target. (For the windows platform).
+Creates a soft directory link from $source to $target.
+
+Not available on embedded systems.
 */
 link --soft-directory --source/string --target/string -> none:
   if not soft-directory: throw "INVALID_ARGUMENT"
@@ -295,6 +296,8 @@ link --soft-directory --source/string --target/string -> none:
 /**
 Creates a symbolic link from $source to $target. This version of link requires that the $target exists.
   It will automatically choose the correct version of link based on the type of $target and the host platform
+
+Not available on embedded systems.
 */
 link --source/string --target/string -> none:
   if not stat target: throw "INVALID_ARGUMENT"
@@ -311,7 +314,9 @@ link_ source/string target/string type/int -> none:
   #primitive.file.link
 
 /**
-Reads the destination of the link $name
+Reads the destination of the link $name.
+
+Not available on embedded systems.
 */
 readlink name/string -> string:
   #primitive.file.readlink
@@ -329,6 +334,8 @@ WINDOWS-FILE-ATTRIBUTE-ARCHIVE  ::= 0x20
 
 /**
 Changes filesystem permissions for the file $name to $permissions.
+
+Not available on embedded systems.
 */
 chmod name/string permissions/int:
   #primitive.file.chmod

@@ -45,8 +45,8 @@ main:
     // Test that relative soft-links are relative to the source.
     file.link --soft --source="test-dir/relative" --target="relative-soft-name"
     expect-equals "relative-soft-name" (file.readlink "test-dir/relative")
-    file.link --soft --source="test-dir/relative-soft-name" --target="..$(directory.dir-separator)test-file"
-    expect-equals "..$(directory.dir-separator)test-file" (file.readlink "test-dir/relative-soft-name")
+    file.link --soft --source="test-dir/relative-soft-name" --target="..$(directory.directory-separator)test-file"
+    expect-equals "..$(directory.directory-separator)test-file" (file.readlink "test-dir/relative-soft-name")
     expect-equals CONTENT.to_byte_array (file.read_content "test-dir/relative")
 
     // Test that hardlinks are always relative to cwd.

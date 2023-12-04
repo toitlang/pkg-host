@@ -3,13 +3,14 @@
 // be found in the tests/LICENSE file.
 
 import expect show *
+import system
 
 import host.pipe
 import host.directory
 import semver
 
 main args:
-  if platform == "Windows" and (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
+  if system.platform == "Windows" and (semver.compare system.vm-sdk-version "v2.0.0-alpha.114") < 0:
     print "This test requires a newer version of the SDK."
     exit 0
 
