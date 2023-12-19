@@ -267,41 +267,45 @@ rename from/string to/string -> none:
   #primitive.file.rename
 
 /**
-Creates a hard link from $source to $target.
+Creates a hard link from $source to a $target file.
 */
 link --hard --source/string --target/string -> none:
   if not hard: throw "INVALID_ARGUMENT"
   link_ source target LINK_TYPE_HARD_
 
 /**
-Creates a soft link from $source to $target.
-  Note: On Posix systems this works for both directories and files.
-  On Windows systems this works only for file links.
+Creates a soft link from $source to a $target file.
 */
-link --soft --source/string --target/string -> none:
-  if not soft: throw "INVALID_ARGUMENT"
+link --file --source/string --target/string -> none:
+  if not file: throw "INVALID_ARGUMENT"
+  if is-directory target:
+    throw "Target is a directory"
   link_ source target LINK_TYPE_SYMBOLIC_
 
 /**
-Creates a soft directory link from $source to $target. (For the windows platform).
+Creates a soft link from $source to a $target directory.
 */
-link --soft-directory --source/string --target/string -> none:
-  if not soft-directory: throw "INVALID_ARGUMENT"
+link --directory --source/string --target/string -> none:
+  if not directory: throw "INVALID_ARGUMENT"
+  if is-file target:
+    throw "Target is a file"
   if system.platform == system.PLATFORM-WINDOWS:
     link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
   else:
     link_ source target LINK_TYPE_SYMBOLIC_
 
 /**
-Creates a symbolic link from $source to $target. This version of link requires that the $target exists.
-  It will automatically choose the correct version of link based on the type of $target and the host platform
+Creates a symbolic link from $source to $target. This version of link requires
+  that the $target exists.
+It will automatically choose the correct type of link (file or directory) based
+  on the type of $target.
 */
 link --source/string --target/string -> none:
   if not stat target: throw "INVALID_ARGUMENT"
   if is_directory target and system.platform == system.PLATFORM-WINDOWS:
-    link --soft-directory --source=source --target=target
+    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
   else:
-    link --soft --source=source --target=target
+    link_ source target LINK_TYPE_SYMBOLIC_
 
 LINK_TYPE_HARD_                       ::= 0
 LINK_TYPE_SYMBOLIC_                   ::= 1
