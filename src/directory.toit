@@ -9,13 +9,9 @@ import system
 import .file as file
 
 /**
-The dir separator for the underlying operating system.
+The default directory separator for the underlying operating system.
 */
-dir-separator -> string:
-  if system.platform == system.PLATFORM-WINDOWS:
-    return "\\"
-  else:
-    return "/"
+SEPARATOR/string ::= (system.platform == system.PLATFORM-WINDOWS) ? "\\" : "/"
 
 /** Removes an empty directory. */
 rmdir path/string -> none:
@@ -37,7 +33,7 @@ rmdir path/string --recursive/bool -> none:
     if type == file.DIRECTORY:
       rmdir --recursive child
     else if type == file.DIRECTORY_SYMBOLIC_LINK:
-      rmdir child // Windows special handling of symbolic links to a directory
+      rmdir child  // Windows special handling of symbolic links to a directory.
     else:
       file.delete child
   stream.close
@@ -152,10 +148,10 @@ class DirectoryStream:
 opendir_ resource_group name:
   #primitive.file.opendir2
 
-readdir_ dir -> ByteArray:
+readdir_ directory -> ByteArray:
   #primitive.file.readdir
 
-closedir_ dir:
+closedir_ directory:
   #primitive.file.closedir
 
 same_entry_ a b:

@@ -301,7 +301,7 @@ It will automatically choose the correct type of link (file or directory) based
   on the type of $target.
 */
 link --source/string --target/string -> none:
-  if not stat target: throw "INVALID_ARGUMENT"
+  if not stat target: throw "TARGET_NOT_FOUND"
   if is_directory target and system.platform == system.PLATFORM-WINDOWS:
     link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
   else:

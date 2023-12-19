@@ -11,7 +11,7 @@ import bytes
 
 CONTENT ::= "asdsssa"
 main:
-  // Make a temporary directory in the current dir.
+  // Make a temporary directory in the current directory.
   tmp_dir := directory.mkdtemp "/tmp/foo-"
   expect (file.is_directory tmp_dir)
 
@@ -43,7 +43,7 @@ main:
     expect-equals CONTENT.to_byte_array (file.read_content "test-file-soft-link")
 
     // Test that we can't auto detect link type if the target does not exist.
-    expect-throw "INVALID_ARGUMENT": file.link --source="test-file" --target="test-file-that-does-not-exist"
+    expect-throw "TARGET_NOT_FOUND": file.link --source="test-file" --target="test-file-that-does-not-exist"
 
     // Test that we can't make a file link to a directory.
     expect-throw "Target is a directory": file.link --file --source="foo" --target="test-dir"
@@ -57,8 +57,8 @@ main:
     // Test that relative soft-links are relative to the source.
     file.link --file --source="test-dir/relative" --target="relative-soft-name"
     expect-equals "relative-soft-name" (file.readlink "test-dir/relative")
-    file.link --file --source="test-dir/relative-soft-name" --target="..$(directory.dir-separator)test-file"
-    expect-equals "..$(directory.dir-separator)test-file" (file.readlink "test-dir/relative-soft-name")
+    file.link --file --source="test-dir/relative-soft-name" --target="..$(directory.SEPARATOR)test-file"
+    expect-equals "..$(directory.SEPARATOR)test-file" (file.readlink "test-dir/relative-soft-name")
     expect-equals CONTENT.to_byte_array (file.read_content "test-dir/relative")
 
     // Test that hardlinks are always relative to cwd.
