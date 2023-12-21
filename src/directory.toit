@@ -54,7 +54,7 @@ mkdir --recursive/bool path/string mode/int=0x1ff -> none:
   // TODO(florian): This doesn't work for UNC drives on Windows.
   // We must not split the volume name.
   if system.platform == system.PLATFORM-WINDOWS:
-    path = path.replace "\\" "/"
+    path = path.replace --all "\\" "/"
 
   built_path := ""
   parts := path.split "/"

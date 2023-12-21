@@ -17,7 +17,7 @@ with_tmp_dir [block]:
 
 main:
   with_tmp_dir: | tmp_dir |
-    ["foo", "føo", "f€o", "f😀o"].do: | name |
+    ["test-foo", "test-føo", "test-f€o", "test-f😀o"].do: | name |
       // Create relative directory in the current working directory.
       // Pollutes the current working directory, but we want to test
       // relative directory creation.
@@ -26,6 +26,7 @@ main:
       expect (file.is_directory name)
       print "Remove name"
       rmdir name
+      expect_not (file.is_directory name)
 
       tmp_name := "$tmp_dir/$name"
       print "Make $tmp_name"
@@ -33,20 +34,25 @@ main:
       expect (file.is_directory tmp_name)
       print "Remove $tmp_dir/name"
       rmdir tmp_name
+      expect_not (file.is_directory name)
 
-    mkdir --recursive "foo/bar/gee"
-    expect (file.is_directory "foo/bar/gee")
-    rmdir --recursive "foo/bar/gee"
+    mkdir --recursive "test-foo/bar/gee"
+    expect (file.is_directory "test-foo/bar/gee")
+    rmdir --recursive "test-foo"
+    expect_not (file.is_directory "test-foo")
 
-    mkdir --recursive "$tmp_dir/foo/bar/gee"
-    expect (file.is_directory "$tmp_dir/foo/bar/gee")
-    rmdir --recursive "$tmp_dir/foo/bar/gee"
+    mkdir --recursive "$tmp_dir/test-foo/bar/gee"
+    expect (file.is_directory "$tmp_dir/test-foo/bar/gee")
+    rmdir --recursive "$tmp_dir/test-foo"
+    expect_not (file.is_directory "$tmp_dir/test-foo")
 
     if system.platform == system.PLATFORM-WINDOWS:
-      mkdir --recursive "foo\\bar\\gee"
-      expect (file.is_directory "foo\\bar\\gee")
-      rmdir --recursive "foo\\bar\\gee"
+      mkdir --recursive "test-foo\\bar\\gee"
+      expect (file.is_directory "test-foo\\bar\\gee")
+      rmdir --recursive "test-foo"
+      expect_not (file.is_directory "test-foo")
 
-      mkdir --recursive "$tmp_dir\\foo\\bar\\gee"
-      expect (file.is_directory "$tmp_dir\\foo\\bar\\gee")
-      rmdir --recursive "$tmp_dir\\foo\\bar\\gee"
+      mkdir --recursive "$tmp_dir\\test-foo\\bar\\gee"
+      expect (file.is_directory "$tmp_dir\\test-foo\\bar\\gee")
+      rmdir --recursive "$tmp_dir\\test-foo"
+      expect_not (file.is_directory "$tmp_dir\\test-foo")
