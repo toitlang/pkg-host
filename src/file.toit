@@ -5,8 +5,11 @@
 import reader show Reader
 import writer show Writer
 
-// Manipulation of files on a filesystem.  Currently not available on embedded
-// targets.  Names work best when imported without "show *".
+import system
+import .directory
+
+// Manipulation of files on a filesystem.
+// Names work best when imported without "show *".
 
 // Flags for file.Stream second constructor argument.  Analogous to the
 // second argument to the open() system call.
@@ -54,6 +57,11 @@ REGULAR_FILE ::= 4
 SYMBOLIC_LINK ::= 5
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
+/**
+The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a
+  symlink to a directory. (Windows only).
+*/
+DIRECTORY_SYMBOLIC_LINK ::= 7
 
 /**
 An open file with a current position.  Corresponds in many ways to a file
@@ -251,9 +259,80 @@ Deletes a file, given its name.
 delete name/string -> none:
   #primitive.file.unlink
 
-/*
+/**
 Renames a file or directory.
 Only works if the $to name is on the same filesystem.
 */
 rename from/string to/string -> none:
   #primitive.file.rename
+
+/**
+Creates a hard link from $source to a $target file.
+*/
+link --hard --source/string --target/string -> none:
+  if not hard: throw "INVALID_ARGUMENT"
+  link_ source target LINK_TYPE_HARD_
+
+/**
+Creates a soft link from $source to a $target file.
+*/
+link --file --source/string --target/string -> none:
+  if not file: throw "INVALID_ARGUMENT"
+  if is-directory target:
+    throw "Target is a directory"
+  link_ source target LINK_TYPE_SYMBOLIC_
+
+/**
+Creates a soft link from $source to a $target directory.
+*/
+link --directory --source/string --target/string -> none:
+  if not directory: throw "INVALID_ARGUMENT"
+  if is-file target:
+    throw "Target is a file"
+  if system.platform == system.PLATFORM-WINDOWS:
+    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+  else:
+    link_ source target LINK_TYPE_SYMBOLIC_
+
+/**
+Creates a symbolic link from $source to $target. This version of link requires
+  that the $target exists.
+It will automatically choose the correct type of link (file or directory) based
+  on the type of $target.
+*/
+link --source/string --target/string -> none:
+  if not stat target: throw "TARGET_NOT_FOUND"
+  if is_directory target and system.platform == system.PLATFORM-WINDOWS:
+    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+  else:
+    link_ source target LINK_TYPE_SYMBOLIC_
+
+LINK_TYPE_HARD_                       ::= 0
+LINK_TYPE_SYMBOLIC_                   ::= 1
+LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_ ::= 2
+
+link_ source/string target/string type/int -> none:
+  #primitive.file.link
+
+/**
+Reads the destination of the link $name
+*/
+readlink name/string -> string:
+  #primitive.file.readlink
+
+/** Windows specific attribute for read-only files */
+WINDOWS-FILE-ATTRIBUTE-READONLY ::= 0x01
+/** Windows specific attribute for hidden files */
+WINDOWS-FILE-ATTRIBUTE-HIDDEN   ::= 0x02
+/** Windows specific attribute for system files */
+WINDOWS-FILE-ATTRIBUTE-SYSTEM   ::= 0x04
+/** Windows specific attribute for normal files */
+WINDOWS-FILE-ATTRIBUTE-NORMAL   ::= 0x80
+/** Windows specific attribute for archive files */
+WINDOWS-FILE-ATTRIBUTE-ARCHIVE  ::= 0x20
+
+/**
+Changes filesystem permissions for the file $name to $permissions.
+*/
+chmod name/string permissions/int:
+  #primitive.file.chmod
