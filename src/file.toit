@@ -269,14 +269,14 @@ rename from/string to/string -> none:
 /**
 Creates a hard link from $source to a $target file.
 */
-link --hard --source/string --target/string -> none:
+link --hard/bool --source/string --target/string -> none:
   if not hard: throw "INVALID_ARGUMENT"
   link_ source target LINK_TYPE_HARD_
 
 /**
 Creates a soft link from $source to a $target file.
 */
-link --file --source/string --target/string -> none:
+link --file/bool --source/string --target/string -> none:
   if not file: throw "INVALID_ARGUMENT"
   if is-directory target:
     throw "Target is a directory"
@@ -285,7 +285,7 @@ link --file --source/string --target/string -> none:
 /**
 Creates a soft link from $source to a $target directory.
 */
-link --directory --source/string --target/string -> none:
+link --directory/bool --source/string --target/string -> none:
   if not directory: throw "INVALID_ARGUMENT"
   if is-file target:
     throw "Target is a file"
