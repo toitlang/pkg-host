@@ -9,10 +9,6 @@ import host.file
 import semver
 
 main args:
-  if (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
-    print "This test requires a newer version of the SDK."
-    exit 0
-
   if args.size < 1:
     print "Usage: block_std_test.toit <toit_exe>"
     exit 1

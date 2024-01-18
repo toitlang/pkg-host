@@ -6,6 +6,7 @@ import expect show *
 import host.pipe
 import host.os
 import host.file
+import system show platform PLATFORM-WINDOWS
 
 main args:
   if args.size < 1:
@@ -27,7 +28,7 @@ main args:
   pipe.system "$toit_exe tests/echo.toit FOO=\$FOO"
   pipe.system --environment={"FOO": 123} "$toit_exe tests/echo.toit FOO=\$FOO"
 
-  shell := platform == "Windows" ? ["cmd", "/S", "/C"] : ["sh", "-c"]
+  shell := platform == PLATFORM-WINDOWS ? ["cmd", "/S", "/C"] : ["sh", "-c"]
 
   expect_equals "BAR=1.5"
       (pipe.backticks --environment={"BAR": 1.5} toit_exe "tests/echo.toit" "BAR=\$BAR").trim
