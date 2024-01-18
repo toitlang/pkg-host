@@ -54,10 +54,6 @@ class Stress:
 logs := []
 
 main:
-  if platform == "Windows" and (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
-    print "This test requires a newer version of the SDK."
-    exit 0
-
   stress := Stress "cat"
 
   now_us := Time.monotonic_us

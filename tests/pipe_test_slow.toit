@@ -7,6 +7,7 @@ import expect show *
 import host.directory show *
 import host.file
 import host.pipe
+import system show platform PLATFORM-WINDOWS PLATFORM-LINUX PLATFORM-MACOS PLATFORM-FREERTOS
 
 expect_error name [code]:
   expect_equals

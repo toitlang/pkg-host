@@ -7,10 +7,11 @@ import expect show *
 import host.directory show *
 import host.file
 import host.pipe
+import system show platform PLATFORM-FREERTOS PLATFORM-WINDOWS
 
 main args:
   // This test does not work on ESP32 since you can't launch subprocesses.
-  if platform == "FreeRTOS": return
+  if platform == PLATFORM-FREERTOS: return
 
   // This test gets called by the external test script on the SDK, which does
   // not pass two arguments.
