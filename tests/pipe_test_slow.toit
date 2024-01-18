@@ -9,42 +9,42 @@ import host.file
 import host.pipe
 import system show platform PLATFORM-WINDOWS PLATFORM-LINUX PLATFORM-MACOS PLATFORM-FREERTOS
 
-expect_error name [code]:
-  expect_equals
+expect-error name [code]:
+  expect-equals
     name
     catch code
 
-expect_file_not_found cmd [code]:
-  if (cmd.index_of " ") == -1:
-    if platform == PLATFORM_WINDOWS:
-      expect_error "Error trying to run '$cmd' using \$PATH: FILE_NOT_FOUND" code
+expect-file-not-found cmd [code]:
+  if (cmd.index-of " ") == -1:
+    if platform == PLATFORM-WINDOWS:
+      expect-error "Error trying to run '$cmd' using \$PATH: FILE_NOT_FOUND" code
     else:
-      expect_error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
+      expect-error "Error trying to run '$cmd' using \$PATH: No such file or directory" code
   else:
-    if platform == PLATFORM_WINDOWS:
-      expect_error "Error trying to run executable (arguments appended to filename?): '$cmd': FILE_NOT_FOUND" code
+    if platform == PLATFORM-WINDOWS:
+      expect-error "Error trying to run executable (arguments appended to filename?): '$cmd': FILE_NOT_FOUND" code
     else:
-      expect_error "Error trying to run executable (arguments appended to filename?): '$cmd': No such file or directory" code
+      expect-error "Error trying to run executable (arguments appended to filename?): '$cmd': No such file or directory" code
 
-if_windows windows unix:
-  if platform == PLATFORM_WINDOWS: return windows
+if-windows windows unix:
+  if platform == PLATFORM-WINDOWS: return windows
   return unix
 
-low_level_test toit_exe:
+low-level-test toit-exe:
   return
   // TODO: This is intended to test that we can have a different
   // program name to the name in arguments[0].  But it doesn't work on Windows
   // at the moment.  There was an implementation in
   // https://github.com/toitlang/toit/pull/1400, but it fails to find
   // executables without the explicit ".exe" extension, so it was annoying.
-  INHERIT ::= pipe.PIPE_INHERITED
+  INHERIT ::= pipe.PIPE-INHERITED
   output := pipe.OpenPipe false
   stdout := output.fd
-  array := pipe.fork true INHERIT stdout INHERIT toit_exe ["ignored-0-argument", "tests/echo.toit", "horse"]
-  expect_equals
+  array := pipe.fork true INHERIT stdout INHERIT toit-exe ["ignored-0-argument", "tests/echo.toit", "horse"]
+  expect-equals
     "horse"
-    output.read.to_string.trim
-  expect_equals
+    output.read.to-string.trim
+  expect-equals
     null
     output.read
 
@@ -53,37 +53,37 @@ main args:
     print "Usage: pipe_test_slow.toit <toit_exe>"
     exit 1
 
-  low_level_test args[0]
+  low-level-test args[0]
 
   // This test does not work on ESP32 since you can't launch subprocesses.
-  if platform == PLATFORM_FREERTOS: return
+  if platform == PLATFORM-FREERTOS: return
 
   print " ** Some child processes will print errors on stderr during **"
   print " ** this test.  This is harmless and expected.              **"
-  pipe_large_file
-  write_closed_stdin_exception
+  pipe-large-file
+  write-closed-stdin-exception
 
-  if file.is_file "/usr/bin/true":
-    expect_equals
+  if file.is-file "/usr/bin/true":
+    expect-equals
       0
       pipe.system "/usr/bin/true"
 
-  simple_ls_command := if_windows "dir %ComSpec%" "ls /bin/sh"
-  expect_equals
+  simple-ls-command := if-windows "dir %ComSpec%" "ls /bin/sh"
+  expect-equals
     0
     pipe.system
-      simple_ls_command
+      simple-ls-command
 
   // run_program does not parse the command line, splitting at spaces, so it's
   // looking for a single program of the name "ls /bin/sh".
-  expect_file_not_found simple_ls_command: pipe.run_program simple_ls_command
+  expect-file-not-found simple-ls-command: pipe.run-program simple-ls-command
 
   // There's no such program as ll.
-  expect_file_not_found "ll": pipe.run_program "ll" "/bin/sh"
+  expect-file-not-found "ll": pipe.run-program "ll" "/bin/sh"
 
-  expect_equals
+  expect-equals
     0
-    pipe.run_program "ls" "/bin/sh"
+    pipe.run-program "ls" "/bin/sh"
 
   // Increase the heap size a bit so that frequent GCs do not clean up file descriptors.
   a := []
@@ -92,20 +92,20 @@ main args:
 
   // If backticks doesn't clean up open file descriptors, this will run out of
   // them.  Sadly, Windows is astonishingly slow at starting subprocesses.
-  (platform == PLATFORM_WINDOWS ? 100 : 2000).repeat:
-    expect_equals
+  (platform == PLATFORM-WINDOWS ? 100 : 2000).repeat:
+    expect-equals
       ""
       pipe.backticks "true"
 
-  expect_equals
+  expect-equals
     "/bin/sh\n"
     pipe.backticks "ls" "/bin/sh"
 
-  no_exist_cmd := "a program name that does not exist"
-  expect_file_not_found no_exist_cmd : pipe.to no_exist_cmd
+  no-exist-cmd := "a program name that does not exist"
+  expect-file-not-found no-exist-cmd : pipe.to no-exist-cmd
 
   tmpdir := mkdtemp "/tmp/toit_file_test_"
-  old_current_directory := cwd
+  old-current-directory := cwd
 
   try:
     chdir tmpdir
@@ -114,7 +114,7 @@ main args:
     dirname := "testdir"
 
     mkdir dirname
-    go_up := false
+    go-up := false
 
     try:
       p := pipe.to "sh" "-c" "tr A-Z a-z > $dirname/$filename"
@@ -124,27 +124,27 @@ main args:
       expect (file.size "$dirname/$filename") != null
 
       chdir dirname
-      go_up = true
+      go-up = true
 
       output := ""
-      if platform == PLATFORM_WINDOWS:
+      if platform == PLATFORM-WINDOWS:
         p = pipe.from "certutil" "-hashfile" filename
-        while byte_array := p.read:
-          output += byte_array.to_string
+        while byte-array := p.read:
+          output += byte-array.to-string
 
         expect output == "SHA1 hash of $filename:\r\n2dcc8e172c72f3d6937d49be7cf281067d257a62\r\nCertUtil: -hashfile command completed successfully.\r\n"
       else:
         p = pipe.from "shasum" filename
-        while byte_array := p.read:
-          output += byte_array.to_string
+        while byte-array := p.read:
+          output += byte-array.to-string
 
         expect output == "2dcc8e172c72f3d6937d49be7cf281067d257a62  $filename\n"
 
       chdir ".."
-      go_up = false
+      go-up = false
 
     finally:
-      if go_up:
+      if go-up:
         chdir ".."
       file.delete "$dirname/$filename"
       rmdir dirname
@@ -152,53 +152,53 @@ main args:
   finally:
     rmdir --recursive tmpdir
 
-  chdir old_current_directory
+  chdir old-current-directory
 
-  if platform == PLATFORM_WINDOWS:
-    expect_error "certutil: exited with status 2":
+  if platform == PLATFORM-WINDOWS:
+    expect-error "certutil: exited with status 2":
       p := pipe.from "certutil" "file_that_doesn't exist"
       while p.read:
         // Do nothing.
 
-    expect_error "certutil: exited with status 2":
+    expect-error "certutil: exited with status 2":
       sum := pipe.backticks "certutil" "file_that_doesn't exist"
   else:
-    expect_error "shasum: exited with status 1":
+    expect-error "shasum: exited with status 1":
       p := pipe.from "shasum" "file_that_doesn't exist"
       while p.read:
         // Do nothing.
 
-    expect_error "shasum: exited with status 1":
+    expect-error "shasum: exited with status 1":
       sum := pipe.backticks "shasum" "file_that_doesn't exist"
 
-  tar_exit_code := (platform == PLATFORM_LINUX) ? 2 : 1
-  expect_error "tar: exited with status $tar_exit_code":
+  tar-exit-code := (platform == PLATFORM-LINUX) ? 2 : 1
+  expect-error "tar: exited with status $tar-exit-code":
     p := pipe.to "tar" "-xvf" "-" "foo.txt"
     p.close  // Close without sending a valid tar file.
 
-  task:: long_running_sleep
+  task:: long-running-sleep
 
   // Exit explicitly - this will interrupt the task that is just waiting for
   // the subprocess to exit.
   exit 0
 
 // Task that is interrupted by an explicit exit.
-long_running_sleep:
-  pipe.run_program "sleep" "1000"
+long-running-sleep:
+  pipe.run-program "sleep" "1000"
 
 /// Returns whether a path exists and is a character device.
-is_char_device name --follow_links/bool=true -> bool:
-  stat := file.stat name --follow_links
+is-char-device name --follow-links/bool=true -> bool:
+  stat := file.stat name --follow-links
   if not stat: return false
-  return stat[file.ST_TYPE] == file.CHARACTER_DEVICE
+  return stat[file.ST-TYPE] == file.CHARACTER-DEVICE
 
-pipe_large_file:
+pipe-large-file:
   md5sum/string? := null
-  if platform == PLATFORM_WINDOWS:
-    GIT_MD5SUM := "c:/Program Files/Git/usr/bin/md5sum.exe"
-    if file.is_file GIT_MD5SUM:
-      md5sum = GIT_MD5SUM
-  else if platform == PLATFORM_MACOS:
+  if platform == PLATFORM-WINDOWS:
+    GIT-MD5SUM := "c:/Program Files/Git/usr/bin/md5sum.exe"
+    if file.is-file GIT-MD5SUM:
+      md5sum = GIT-MD5SUM
+  else if platform == PLATFORM-MACOS:
     md5sum = "md5"
   else:
     md5sum = "md5sum"
@@ -209,11 +209,11 @@ pipe_large_file:
       o.write buffer
     o.close
 
-write_closed_stdin_exception:
-  if file.is_file "/usr/bin/true":
+write-closed-stdin-exception:
+  if file.is-file "/usr/bin/true":
     stdin := pipe.to ["/usr/bin/true"]
 
-    expect_error "Broken pipe":
+    expect-error "Broken pipe":
       while true:
         stdin.write
           ByteArray 1024

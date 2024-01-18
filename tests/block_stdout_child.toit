@@ -7,7 +7,7 @@ import host.file
 import host.pipe
 
 main args:
-  closing_test := args[0] == "close"
+  closing-test := args[0] == "close"
   stderr := pipe.stderr
   in := pipe.stdin
   out := pipe.stdout
@@ -20,16 +20,16 @@ main args:
       out.write "In the beginning the Universe was created.\n"
       out.write "This has made a lot of people very angry and been widely regarded as a bad move.\n"
       counter++
-    if not closing_test:
+    if not closing-test:
       stderr.write "Done with stdout."
 
   // Loop until the other task blocks.
-  last_seen := -1
-  while last_seen != counter:
-    last_seen = counter
+  last-seen := -1
+  while last-seen != counter:
+    last-seen = counter
     sleep --ms=10
 
-  if closing_test:
+  if closing-test:
     // If the whole process is blocked then the pipe will not be closed.
     stderr.close
   else:

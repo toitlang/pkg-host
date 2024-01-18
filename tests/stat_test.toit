@@ -10,7 +10,7 @@ import writer show Writer
 main:
   s := file.stat "/etc"
   if s:
-    m_time := s[file.ST_MTIME]
-    print m_time
-    expect m_time < Time.now
-    expect m_time > (Time.epoch --s=0)
+    m-time := s[file.ST-MTIME]
+    print m-time
+    expect m-time < Time.now
+    expect m-time > (Time.epoch --s=0)

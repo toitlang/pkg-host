@@ -12,51 +12,51 @@ main args:
     print "Usage: block_std_test.toit <toit_exe>"
     exit 1
 
-  if not file.is_file "tests/block_stdout_child.toit":
+  if not file.is-file "tests/block_stdout_child.toit":
     print "Cannot find toit file 'block_stdout_child.toit' in tests directory"
     exit 1
 
-  if not file.is_file "tests/block_stdin_child.toit":
+  if not file.is-file "tests/block_stdin_child.toit":
     print "Cannot find toit file 'block_stdin_child.toit' in tests directory"
     exit 1
 
-  toit_exe := args[0]
+  toit-exe := args[0]
 
   // Try to run the toit executable.
-  print "Trying to run $toit_exe"
-  exception := catch: pipe.backticks toit_exe "--version"
+  print "Trying to run $toit-exe"
+  exception := catch: pipe.backticks toit-exe "--version"
   if exception:
-    print "Running the given toit executable '$toit_exe' failed: $exception"
+    print "Running the given toit executable '$toit-exe' failed: $exception"
     exit 1
 
-  print "Managed to run $toit_exe"
+  print "Managed to run $toit-exe"
 
   ["close", "read"].do: | action |
     subprocess := pipe.fork
       true  // use_path
-      pipe.PIPE_CREATED   // stdin
-      pipe.PIPE_CREATED   // stdout
-      pipe.PIPE_INHERITED // stderr
-      toit_exe
-      [toit_exe, "tests/block_stdin_child.toit", action]
+      pipe.PIPE-CREATED   // stdin
+      pipe.PIPE-CREATED   // stdout
+      pipe.PIPE-INHERITED // stderr
+      toit-exe
+      [toit-exe, "tests/block_stdin_child.toit", action]
 
     print "Started subprocess"
 
-    subprocess_stdin  := subprocess[0]
-    subprocess_stdout := subprocess[1]
+    subprocess-stdin  := subprocess[0]
+    subprocess-stdout := subprocess[1]
     pid := subprocess[3]
 
-    line := subprocess_stdout.read
-    expect_equals "Message through stdout." line.to_string
-    print "$line.to_string"
+    line := subprocess-stdout.read
+    expect-equals "Message through stdout." line.to-string
+    print "$line.to-string"
     if action == "read":
-      subprocess_stdin.write "There is an art to flying, or rather a knack.\n"
+      subprocess-stdin.write "There is an art to flying, or rather a knack.\n"
     else:
-      subprocess_stdin.close
+      subprocess-stdin.close
 
-    exit_value := pipe.wait_for pid
-    expect_equals 0
-      pipe.exit_code exit_value
-    expect_equals null
-      pipe.exit_signal exit_value
+    exit-value := pipe.wait-for pid
+    expect-equals 0
+      pipe.exit-code exit-value
+    expect-equals null
+      pipe.exit-signal exit-value
     print "OK exit"

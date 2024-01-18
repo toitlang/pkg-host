@@ -17,30 +17,30 @@ main args:
   // not pass two arguments.
   if args.size < 2: return
 
-  crash_exe := args[1]
+  crash-exe := args[1]
 
-  run_crash := : | signal/int? |
-    signal_arg := signal ? ["$signal"] : []
+  run-crash := : | signal/int? |
+    signal-arg := signal ? ["$signal"] : []
     pipes := pipe.fork
       true  // use_path
-      pipe.PIPE_CREATED  // stdin
-      pipe.PIPE_CREATED  // stdout
-      pipe.PIPE_CREATED  // stderr
-      crash_exe
-      [crash_exe] + signal_arg
+      pipe.PIPE-CREATED  // stdin
+      pipe.PIPE-CREATED  // stdout
+      pipe.PIPE-CREATED  // stderr
+      crash-exe
+      [crash-exe] + signal-arg
 
     pid := pipes[3]
-    pipe.wait_for pid
+    pipe.wait-for pid
 
-  signals_to_test := [
+  signals-to-test := [
     4, // SIGILL
     15, // SIGTERM
   ]
-  if platform != PLATFORM_WINDOWS:
-    signals_to_test += [
+  if platform != PLATFORM-WINDOWS:
+    signals-to-test += [
       9, // SIGKILL
     ]
 
-  signals_to_test.do: |signal|
-    exit_value := run_crash.call signal
-    expect_equals signal (pipe.exit_signal exit_value)
+  signals-to-test.do: |signal|
+    exit-value := run-crash.call signal
+    expect-equals signal (pipe.exit-signal exit-value)

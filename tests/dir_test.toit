@@ -10,18 +10,18 @@ import semver
 
 main args:
   if args[0] == "--run-test":
-    test_not_existing
+    test-not-existing
     return
 
-  toit_run := args[0]
-  test_not_existing
+  toit-run := args[0]
+  test-not-existing
 
   5.repeat:
-    pipe.run_program toit_run "tests/dir_test.toit" "--run-test"
+    pipe.run-program toit-run "tests/dir_test.toit" "--run-test"
 
-test_not_existing:
+test-not-existing:
   50.repeat:
     exception := catch:
       files := directory.DirectoryStream "not-existing"
       unreachable
-    expect_not_null exception
+    expect-not-null exception

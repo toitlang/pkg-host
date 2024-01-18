@@ -26,45 +26,45 @@ class ArgumentParser:
   // Just so we can instantiate this class without a deprecation warning.
   constructor.private_:
 
-  static calculate_minimum_ rest_names/List? -> int:
-    if rest_names == null:
+  static calculate-minimum_ rest-names/List? -> int:
+    if rest-names == null:
       return 0
-    size := rest_names.size
-    if size > 0 and rest_names[size - 1] == "...":
+    size := rest-names.size
+    if size > 0 and rest-names[size - 1] == "...":
       size--
-    while size > 0 and rest_names[size - 1].starts_with "[" and rest_names[size - 1].ends_with "]":
+    while size > 0 and rest-names[size - 1].starts-with "[" and rest-names[size - 1].ends-with "]":
       size--
     return size
 
-  static calculate_maximum_ rest_names/List? -> int:
-    if rest_names == null:
+  static calculate-maximum_ rest-names/List? -> int:
+    if rest-names == null:
       return UNLIMITED
-    size := rest_names.size
-    if size > 0 and rest_names[size - 1] == "...":
+    size := rest-names.size
+    if size > 0 and rest-names[size - 1] == "...":
       return UNLIMITED
     return size
 
-  static calculate_rest_usage_ rest_names/List? rest_minimum/int rest_maximum/int -> string:
-    if rest_maximum == 0: return ""
+  static calculate-rest-usage_ rest-names/List? rest-minimum/int rest-maximum/int -> string:
+    if rest-maximum == 0: return ""
 
     parts := [""]
 
     count := max
-      rest_maximum == UNLIMITED ? rest_minimum : rest_maximum
-      rest_names ? rest_names.size : 0
+      rest-maximum == UNLIMITED ? rest-minimum : rest-maximum
+      rest-names ? rest-names.size : 0
 
     count.repeat: | i |
-      name := (rest_names and rest_names.size > i) ? rest_names[i] : "argument"
-      if name.starts_with "<" and name.ends_with ">":
+      name := (rest-names and rest-names.size > i) ? rest-names[i] : "argument"
+      if name.starts-with "<" and name.ends-with ">":
         parts.add name
-      if name.starts_with "[" and name.ends_with "]":
+      if name.starts-with "[" and name.ends-with "]":
         parts.add name
-      else if i >= rest_minimum and name != "...":
+      else if i >= rest-minimum and name != "...":
         parts.add "[$name]"
       else if name != "...":
         parts.add "<$name>"
 
-    if rest_maximum == UNLIMITED:
+    if rest-maximum == UNLIMITED:
       parts.add "..."
 
     return parts.join " "
@@ -73,30 +73,30 @@ class ArgumentParser:
   Add a new command to the parser.
   Returns a new $ArgumentParser for the given command.
   */
-  add_command name/string -> ArgumentParser:
-    if rest_was_described_: throw "Can't have rest arguments and commands"
+  add-command name/string -> ArgumentParser:
+    if rest-was-described_: throw "Can't have rest arguments and commands"
     // TODO(kasper): Check if we already have a parser for the given
     // command name. Don't allow duplicates.
     return commands_[name] = ArgumentParser.private_
 
   /// Adds a boolean flag for the given name. Always defaults to false. Can be
   ///   set to true by passing '--<name>' or '-<short>' if short isn't null.
-  add_flag name/string --short/string?=null -> none:
-    options_["--$name"] = Option_ name --is_flag --default=false
-    if short: add_alias name short
+  add-flag name/string --short/string?=null -> none:
+    options_["--$name"] = Option_ name --is-flag --default=false
+    if short: add-alias name short
 
   /// Adds an option with the given default value.
-  add_option name/string --default=null --short/string?=null -> none:
+  add-option name/string --default=null --short/string?=null -> none:
     options_["--$name"] = Option_ name --default=default
-    if short: add_alias name short
+    if short: add-alias name short
 
   /// Adds an option that can be provided multiple times.
-  add_multi_option name/string --split_commas/bool=true --short/string?=null -> none:
-    options_["--$name"] = Option_ name --is_multi_option --split_commas=split_commas
-    if short: add_alias name short
+  add-multi-option name/string --split-commas/bool=true --short/string?=null -> none:
+    options_["--$name"] = Option_ name --is-multi-option --split-commas=split-commas
+    if short: add-alias name short
 
   /// Adds a short alias for an option.
-  add_alias name/string short/string:
+  add-alias name/string short/string:
     options_["-$short"] = options_["--$name"]
 
   /**
@@ -113,30 +113,30 @@ class ArgumentParser:
   $usage is a textual description of the rest arguments that can be
     provided.  It defaults to a string constructed from the other arguments.
   */
-  describe_rest -> none
+  describe-rest -> none
       names /List? = null
-      --min /int = (calculate_minimum_ names)
-      --max /int = (calculate_maximum_ names)
-      --usage /string? = (calculate_rest_usage_ names min max):
+      --min /int = (calculate-minimum_ names)
+      --max /int = (calculate-maximum_ names)
+      --usage /string? = (calculate-rest-usage_ names min max):
     if commands_.size != 0: throw "Can't have rest arguments and commands"
-    rest_minimum = min
-    rest_maximum = max
-    rest_usage = usage
-    rest_was_described_ = true
+    rest-minimum = min
+    rest-maximum = max
+    rest-usage = usage
+    rest-was-described_ = true
 
   /**
   Parses the given $arguments.
   If there is an error it prints the error message and the usage
     description on stderr, then exits the VM completely with a non-zero
     exit value.
-  The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $system.program_name.
+  The $invoked-command is used only for the usage message in case of an
+    error.  It defaults to $system.program-name.
   */
-  parse arguments --invoked_command=system.program_name -> Arguments:
-    return parse arguments --invoked_command=invoked_command: | error_message usage_string |
-      print_on_stderr_ "$error_message"
-      print_on_stderr_
-          usage_string
+  parse arguments --invoked-command=system.program-name -> Arguments:
+    return parse arguments --invoked-command=invoked-command: | error-message usage-string |
+      print-on-stderr_ "$error-message"
+      print-on-stderr_
+          usage-string
       exit 1
 
   /**
@@ -146,34 +146,34 @@ class ArgumentParser:
   `error_message`: the error message.
   `usage_string`: A usage string for the whole parser, or perhaps just the subcommand the user attempted to use.
     This may be a multiline string, but it doesn't have a terminating newline.
-  The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $system.program_name.
+  The $invoked-command is used only for the usage message in case of an
+    error.  It defaults to $system.program-name.
   */
-  parse arguments --invoked_command=system.program_name [error_block] -> Arguments:
+  parse arguments --invoked-command=system.program-name [error-block] -> Arguments:
     try:
       return parse_ this null arguments 0
-    finally: | is_exception exception |
-      if is_exception:
+    finally: | is-exception exception |
+      if is-exception:
         (arguments.size + 1).repeat:
-          if it >= arguments.size or not arguments[it].starts_with "-":
-            error_block.call exception.value (usage arguments[it..] --invoked_command=invoked_command)
+          if it >= arguments.size or not arguments[it].starts-with "-":
+            error-block.call exception.value (usage arguments[it..] --invoked-command=invoked-command)
 
   commands_ := {:}
   options_ := {:}
-  rest_minimum/int := 0
-  rest_maximum/int := UNLIMITED
-  rest_usage/string := ""
-  rest_was_described_/bool := false
+  rest-minimum/int := 0
+  rest-maximum/int := UNLIMITED
+  rest-usage/string := ""
+  rest-was-described_/bool := false
 
   /**
   Provides a usage guide for the user.  The arguments list is
     used to limit usage to a subcommand if any.
-  The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $system.program_name.
+  The $invoked-command is used only for the usage message in case of an
+    error.  It defaults to $system.program-name.
   */
-  usage arguments/List=[] --invoked_command=system.program_name -> string:
+  usage arguments/List=[] --invoked-command=system.program-name -> string:
     result := "Usage:"
-    prefix := "$invoked_command "
+    prefix := "$invoked-command "
     parser := this
     for index := 0; index < arguments.size; index++:
       command := arguments[index]
@@ -185,7 +185,7 @@ class ArgumentParser:
         prefix += command + " "
         parser = commands_[command]
       else if parser.options_.contains command:
-        if (command.index_of "=") == -1 and not parser.options_[command].is_flag and parser.options_[command].default == null:
+        if (command.index-of "=") == -1 and not parser.options_[command].is-flag and parser.options_[command].default == null:
           index++  // Skip the option's argument.
         continue
       else:
@@ -194,19 +194,19 @@ class ArgumentParser:
 
   usage_ --prefix -> string:
     options_.do: | name option |
-      if name.starts_with "--":
-        display_name := name
+      if name.starts-with "--":
+        display-name := name
         options_.do: | shortname shortoption |
           if shortname != name and shortoption == option:
-            display_name = "$shortname|$display_name"
-        if option.is_flag:
-          prefix = "$(prefix)[$display_name] "
+            display-name = "$shortname|$display-name"
+        if option.is-flag:
+          prefix = "$(prefix)[$display-name] "
         else:
-          star := option.is_multi_option ? "*" : ""
-          prefix = "$(prefix)[$display_name=<$name[2..]>]$star "
-    if commands_.is_empty:
-      if rest_usage != "":
-        return "\n$(prefix)[--]$rest_usage"
+          star := option.is-multi-option ? "*" : ""
+          prefix = "$(prefix)[$display-name=<$name[2..]>]$star "
+    if commands_.is-empty:
+      if rest-usage != "":
+        return "\n$(prefix)[--]$rest-usage"
       return "\n$prefix[..prefix.size - 1]"
     result := ""
     commands_.do: | command subparser |
@@ -223,7 +223,7 @@ class Arguments:
 
   // Returns the parsed option or the default value.
   operator[] key/string -> any:
-    return options_.get key --if_absent=: throw "No option named '$key'"
+    return options_.get key --if-absent=: throw "No option named '$key'"
 
   // Returns the non-option arguments.
   rest -> List:
@@ -233,7 +233,7 @@ class Arguments:
     buffer := []
     if command_: buffer.add command_
     options_.do: | name value | buffer.add "--$name=$value"
-    if not rest_.is_empty:
+    if not rest_.is-empty:
       buffer.add "--"
       rest_.do: buffer.add it
     return buffer.join " "
@@ -250,15 +250,15 @@ parse_ grammar/ArgumentParser command/string? arguments/List index/int --options
   rest := []
   grammar.options_.do --values: | option |
     options.get option.name --init=:
-      option.is_multi_option ? [] : option.default
+      option.is-multi-option ? [] : option.default
 
-  seen_options := {}
+  seen-options := {}
 
   while index < arguments.size:
     argument := arguments[index]
 
     if not command and rest.size == 0 and index < arguments.size:
-      grammar.commands_.get argument --if_present=: | sub |
+      grammar.commands_.get argument --if-present=: | sub |
         return parse_ sub argument arguments index + 1 --options=options
 
     if argument == "--":
@@ -267,25 +267,25 @@ parse_ grammar/ArgumentParser command/string? arguments/List index/int --options
 
     option := null
     value := null
-    if argument.starts_with "--":
+    if argument.starts-with "--":
       // Get the option name.
-      split := argument.index_of "="
+      split := argument.index-of "="
       name := (split < 0) ? argument : argument.copy 0 split
 
-      option = grammar.options_.get name --if_absent=: throw "Unknown option $name"
+      option = grammar.options_.get name --if-absent=: throw "Unknown option $name"
       if split >= 0: value = argument.copy split + 1
-    else if argument.starts_with "-":
+    else if argument.starts-with "-":
       // Compute the option and the effective name. We allow short form prefixes to have
       // the value encoded in the same argument like -s"123 + 345", so we have to search
       // for prefixes.
       name := argument
       grammar.options_.get argument
-        --if_present=:
+        --if-present=:
           name = argument
           option = it
-        --if_absent=:
+        --if-absent=:
           grammar.options_.do --keys:
-            if argument.starts_with it:
+            if argument.starts-with it:
               name = it
               option = grammar.options_[it]
       if not option: throw "Unknown option $argument"
@@ -294,29 +294,29 @@ parse_ grammar/ArgumentParser command/string? arguments/List index/int --options
         value = argument.copy name.size
 
     if option:
-      if option.is_flag:
+      if option.is-flag:
         if value: throw "Cannot specify value for boolean flags ($value)"
         value = true
       else if not value:
         if ++index >= arguments.size: throw "No value provided for option $argument"
         value = arguments[index]
 
-      if option.is_multi_option:
-        values := option.split_commas ? value.split "," : [value]
-        options[option.name].add_all values
-      else if seen_options.contains option.name:
+      if option.is-multi-option:
+        values := option.split-commas ? value.split "," : [value]
+        options[option.name].add-all values
+      else if seen-options.contains option.name:
         throw "Option was provided multiple times: $argument"
       else:
         options[option.name] = value
-        seen_options.add option.name
+        seen-options.add option.name
     else:
       rest.add argument
     index++
 
-  if rest.size < grammar.rest_minimum:
+  if rest.size < grammar.rest-minimum:
     throw "Too few arguments"
 
-  if grammar.rest_maximum != UNLIMITED and rest.size > grammar.rest_maximum:
+  if grammar.rest-maximum != UNLIMITED and rest.size > grammar.rest-maximum:
     throw "Too many arguments"
 
   // Construct an [Arguments] object and return it.
@@ -324,10 +324,10 @@ parse_ grammar/ArgumentParser command/string? arguments/List index/int --options
 
 class Option_:
   name := ?
-  is_flag := false
-  is_multi_option := false
-  split_commas := false  // Only used, if this is a multi-option.
+  is-flag := false
+  is-multi-option := false
+  split-commas := false  // Only used, if this is a multi-option.
   default := ?
 
-  constructor .name --.is_flag=false --.is_multi_option=false --.split_commas=false --.default=null:
-    assert: not split_commas or is_multi_option
+  constructor .name --.is-flag=false --.is-multi-option=false --.split-commas=false --.default=null:
+    assert: not split-commas or is-multi-option

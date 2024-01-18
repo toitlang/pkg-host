@@ -14,13 +14,13 @@ class Stress:
 
   constructor .executable:
 
-  run_compiler id channel:
+  run-compiler id channel:
     channel.send "$id: started"
     pipes := pipe.fork
         true                // use_path
-        pipe.PIPE_CREATED   // stdin
-        pipe.PIPE_CREATED   // stdout
-        pipe.PIPE_INHERITED // stderr
+        pipe.PIPE-CREATED   // stdin
+        pipe.PIPE-CREATED   // stdout
+        pipe.PIPE-INHERITED // stderr
         executable
         [
           executable,
@@ -28,26 +28,26 @@ class Stress:
     to   := pipes[0]
     from := pipes[1]
     pid  := pipes[3]
-    pipe.dont_wait_for pid
+    pipe.dont-wait-for pid
     channel.send "$id: forked"
 
-    pipe_writer := Writer to
+    pipe-writer := Writer to
     // Stress pipes.
-    LINES_COUNT ::= 500
-    for i := 0; i < LINES_COUNT; i++:
-      pipe_writer.write "line$i\n"
-    pipe_writer.close
+    LINES-COUNT ::= 500
+    for i := 0; i < LINES-COUNT; i++:
+      pipe-writer.write "line$i\n"
+    pipe-writer.close
 
     reader := BufferedReader from
-    read_counter := 0
+    read-counter := 0
     while true:
-      line := reader.read_line
+      line := reader.read-line
       if line == null:
         channel.send "$id: done"
         break
-      expect_equals "line$read_counter" line
-      read_counter++
-    expect_equals LINES_COUNT read_counter
+      expect-equals "line$read-counter" line
+      read-counter++
+    expect-equals LINES-COUNT read-counter
     from.close
     channel.send null
 
@@ -56,16 +56,16 @@ logs := []
 main:
   stress := Stress "cat"
 
-  now_us := Time.monotonic_us
+  now-us := Time.monotonic-us
   counter := 0
-  while Time.monotonic_us - now_us < 15_000_000:
+  while Time.monotonic-us - now-us < 15_000_000:
     print "Iteration $(counter++)"
     logs.clear
     channel := monitor.Channel 100
     running := 0
     for i := 0; i < 30; i++:
       running++
-      task:: stress.run_compiler i channel
+      task:: stress.run-compiler i channel
     while true:
       value := channel.receive
       if value == null:

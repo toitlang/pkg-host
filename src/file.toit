@@ -21,47 +21,47 @@ CREAT ::= 8
 TRUNC ::= 0x10
 
 /// Index of the device number in the array returned by $stat.
-ST_DEV ::= 0
+ST-DEV ::= 0
 /// Index of the inode number in the array returned by $stat.
-ST_INO ::= 1
+ST-INO ::= 1
 /// Index of the permissions bits in the array returned by $stat.
-ST_MODE ::= 2
+ST-MODE ::= 2
 /// Index of the file type number in the array returned by $stat.
-ST_TYPE ::= 3
+ST-TYPE ::= 3
 /// Index of the link count in the array returned by $stat.
-ST_NLINK ::= 4
+ST-NLINK ::= 4
 /// Index of the owning user id in the array returned by $stat.
-ST_UID ::= 5
+ST-UID ::= 5
 /// Index of the owning group id in the array returned by $stat.
-ST_GID ::= 6
+ST-GID ::= 6
 /// Index of the file size in the array returned by $stat.
-ST_SIZE ::= 7
+ST-SIZE ::= 7
 /// Index of the last access time in the array returned by $stat.
-ST_ATIME ::= 8
+ST-ATIME ::= 8
 /// Index of the last modification time in the array returned by $stat.
-ST_MTIME ::= 9
+ST-MTIME ::= 9
 /// Index of the creation time in the array returned by $stat.
-ST_CTIME ::= 10
+ST-CTIME ::= 10
 
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named FIFO.
 FIFO ::= 0
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a character device.
-CHARACTER_DEVICE ::= 1
+CHARACTER-DEVICE ::= 1
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a directory.
 DIRECTORY ::= 2
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a block device.
-BLOCK_DEVICE ::= 3
+BLOCK-DEVICE ::= 3
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a regular file.
-REGULAR_FILE ::= 4
+REGULAR-FILE ::= 4
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a symbolic link.
-SYMBOLIC_LINK ::= 5
+SYMBOLIC-LINK ::= 5
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
 /**
 The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a
   symlink to a directory. (Windows only).
 */
-DIRECTORY_SYMBOLIC_LINK ::= 7
+DIRECTORY-SYMBOLIC-LINK ::= 7
 
 /**
 An open file with a current position.  Corresponds in many ways to a file
@@ -75,7 +75,7 @@ class Stream implements Reader:
   /**
   Opens the file at $path for reading.
   */
-  constructor.for_read path/string:
+  constructor.for-read path/string:
     return Stream path RDONLY 0
 
   /**
@@ -87,7 +87,7 @@ class Stream implements Reader:
 
   Ignored if the file already exists.
   */
-  constructor.for_write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
+  constructor.for-write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
     return Stream path (WRONLY | TRUNC | CREAT) permissions
 
   /**
@@ -141,13 +141,13 @@ class Stream implements Reader:
   close -> none:
     close_ fd_
 
-  is_a_terminal -> bool:
+  is-a-terminal -> bool:
     return false
 
 
-/// Deprecated. Use $read_content instead.
-read_contents name:
-  return read_content name
+/// Deprecated. Use $read-content instead.
+read-contents name:
+  return read-content name
 
 /**
 Reads the content of a file.
@@ -158,21 +158,21 @@ The content is stored in an off-heap ByteArray.
 On small devices with a flash filesystem, simply gets a view
   of the underlying bytes. (Not implemented yet)
 */
-read_content file_name/string -> ByteArray:
-  length := size file_name
+read-content file-name/string -> ByteArray:
+  length := size file-name
   if length == 0: return ByteArray 0
-  file := Stream.for_read file_name
+  file := Stream.for-read file-name
   try:
-    byte_array := file.read
-    if not byte_array: throw "CHANGED_SIZE"
-    if byte_array.size == length: return byte_array
-    proxy := create_off_heap_byte_array length
+    byte-array := file.read
+    if not byte-array: throw "CHANGED_SIZE"
+    if byte-array.size == length: return byte-array
+    proxy := create-off-heap-byte-array length
     for pos := 0; pos < length; null:
-      proxy.replace pos byte_array 0 byte_array.size
-      pos += byte_array.size
+      proxy.replace pos byte-array 0 byte-array.size
+      pos += byte-array.size
       if pos == length: return proxy
-      byte_array = file.read
-      if not byte_array: throw "CHANGED_SIZE"
+      byte-array = file.read
+      if not byte-array: throw "CHANGED_SIZE"
     return proxy
   finally:
     file.close
@@ -185,8 +185,8 @@ If $permissions is provided uses it to set the permissions of the file.
 The $permissions are only used if the file is created, and not if it is
   overwritten.
 */
-write_content content --path/string --permissions/int?=null -> none:
-  stream := Stream.for_write path --permissions=permissions
+write-content content --path/string --permissions/int?=null -> none:
+  stream := Stream.for-write path --permissions=permissions
   writer := Writer stream
   try:
     writer.write content
@@ -194,16 +194,16 @@ write_content content --path/string --permissions/int?=null -> none:
     writer.close
 
 /// Returns whether a path exists and is a regular file.
-is_file name --follow_links/bool=true -> bool:
-  stat := stat_ name follow_links
+is-file name --follow-links/bool=true -> bool:
+  stat := stat_ name follow-links
   if not stat: return false
-  return stat[ST_TYPE] == REGULAR_FILE
+  return stat[ST-TYPE] == REGULAR-FILE
 
 /// Returns whether a path exists and is a directory.
-is_directory name --follow_links/bool=true -> bool:
-  stat := stat_ name follow_links
+is-directory name --follow-links/bool=true -> bool:
+  stat := stat_ name follow-links
   if not stat: return false
-  return stat[ST_TYPE] == DIRECTORY
+  return stat[ST-TYPE] == DIRECTORY
 
 /**
 Returns the file size in bytes or null for no such file.
@@ -212,8 +212,8 @@ Throws an error if the name exists but is not a regular file.
 size name:
   stat := stat_ name true
   if not stat: return null
-  if stat[ST_TYPE] != REGULAR_FILE: throw "INVALID_ARGUMENT"
-  return stat[ST_SIZE]
+  if stat[ST-TYPE] != REGULAR-FILE: throw "INVALID_ARGUMENT"
+  return stat[ST-SIZE]
 
 // Returns a file descriptor.  Only for use on actual files, not pipes,
 // devices, etc.
@@ -222,23 +222,23 @@ open_ name flags permissions:
 
 /**
 Returns an array describing the given named entry in the filesystem, see the
-  index names $ST_DEV, etc.
+  index names $ST-DEV, etc.
 */
-stat name/string --follow_links/bool=true -> List?:
-  result := stat_ name follow_links
+stat name/string --follow-links/bool=true -> List?:
+  result := stat_ name follow-links
   if not result: return null
-  result[ST_ATIME] = Time.epoch --ns=result[ST_ATIME]
-  result[ST_MTIME] = Time.epoch --ns=result[ST_MTIME]
-  result[ST_CTIME] = Time.epoch --ns=result[ST_CTIME]
+  result[ST-ATIME] = Time.epoch --ns=result[ST-ATIME]
+  result[ST-MTIME] = Time.epoch --ns=result[ST-MTIME]
+  result[ST-CTIME] = Time.epoch --ns=result[ST-CTIME]
   return result
 
-stat_ name/string follow_links/bool -> List?:
+stat_ name/string follow-links/bool -> List?:
   #primitive.file.stat
 
 // Takes an open file descriptor and determines if it represents a file
 // as opposed to a socket or a pipe.
-is_open_file_ fd:
-  #primitive.file.is_open_file
+is-open-file_ fd:
+  #primitive.file.is-open-file
 
 // Reads some data from the file, returning a byte array.  Returns null on
 // end-of-file.
@@ -271,7 +271,7 @@ Creates a hard link from $source to a $target file.
 */
 link --hard/bool --source/string --target/string -> none:
   if not hard: throw "INVALID_ARGUMENT"
-  link_ source target LINK_TYPE_HARD_
+  link_ source target LINK-TYPE-HARD_
 
 /**
 Creates a soft link from $source to a $target file.
@@ -280,7 +280,7 @@ link --file/bool --source/string --target/string -> none:
   if not file: throw "INVALID_ARGUMENT"
   if is-directory target:
     throw "Target is a directory"
-  link_ source target LINK_TYPE_SYMBOLIC_
+  link_ source target LINK-TYPE-SYMBOLIC_
 
 /**
 Creates a soft link from $source to a $target directory.
@@ -290,9 +290,9 @@ link --directory/bool --source/string --target/string -> none:
   if is-file target:
     throw "Target is a file"
   if system.platform == system.PLATFORM-WINDOWS:
-    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+    link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
-    link_ source target LINK_TYPE_SYMBOLIC_
+    link_ source target LINK-TYPE-SYMBOLIC_
 
 /**
 Creates a symbolic link from $source to $target. This version of link requires
@@ -302,14 +302,14 @@ It will automatically choose the correct type of link (file or directory) based
 */
 link --source/string --target/string -> none:
   if not stat target: throw "TARGET_NOT_FOUND"
-  if is_directory target and system.platform == system.PLATFORM-WINDOWS:
-    link_ source target LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_
+  if is-directory target and system.platform == system.PLATFORM-WINDOWS:
+    link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
-    link_ source target LINK_TYPE_SYMBOLIC_
+    link_ source target LINK-TYPE-SYMBOLIC_
 
-LINK_TYPE_HARD_                       ::= 0
-LINK_TYPE_SYMBOLIC_                   ::= 1
-LINK_TYPE_SYMBOLIC_WINDOWS_DIRECTORY_ ::= 2
+LINK-TYPE-HARD_                       ::= 0
+LINK-TYPE-SYMBOLIC_                   ::= 1
+LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_ ::= 2
 
 link_ source/string target/string type/int -> none:
   #primitive.file.link

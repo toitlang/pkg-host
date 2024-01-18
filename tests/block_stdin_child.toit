@@ -6,7 +6,7 @@ import expect show *
 import host.pipe
 
 main args:
-  closing_test := args[0] == "close"
+  closing-test := args[0] == "close"
   in := pipe.stdin
   out := pipe.stdout
   err := pipe.stderr
@@ -15,13 +15,13 @@ main args:
 
   task::
     // This blocks, but that should not block the whole VM.
-    if closing_test:
+    if closing-test:
       result := in.read
-      expect_equals null result
+      expect-equals null result
       err.write "Close woke up the task.\n"
     else:
       err.write "Reading from stdin\n"
-      err.write in.read.to_string
+      err.write in.read.to-string
 
   sleep --ms=100
 
