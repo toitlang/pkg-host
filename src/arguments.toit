@@ -2,6 +2,14 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import system
+
+/**
+A library to parse command line arguments.
+
+Deprecated. Use the toitlang/pkg-cli package instead.
+*/
+
 /// Used as an argument for the `--max` option.
 UNLIMITED ::= -1
 
@@ -9,6 +17,15 @@ UNLIMITED ::= -1
 A customizable parser of command line arguments.
 */
 class ArgumentParser:
+
+  /**
+  Deprecated. The ArgumentParser class is deprecated. Use the toitlang/pkg-cli package instead.
+  */
+  constructor:
+
+  // Just so we can instantiate this class without a deprecation warning.
+  constructor.private_:
+
   static calculate_minimum_ rest_names/List? -> int:
     if rest_names == null:
       return 0
@@ -60,7 +77,7 @@ class ArgumentParser:
     if rest_was_described_: throw "Can't have rest arguments and commands"
     // TODO(kasper): Check if we already have a parser for the given
     // command name. Don't allow duplicates.
-    return commands_[name] = ArgumentParser
+    return commands_[name] = ArgumentParser.private_
 
   /// Adds a boolean flag for the given name. Always defaults to false. Can be
   ///   set to true by passing '--<name>' or '-<short>' if short isn't null.
@@ -113,9 +130,9 @@ class ArgumentParser:
     description on stderr, then exits the VM completely with a non-zero
     exit value.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $program_name.
+    error.  It defaults to $system.program_name.
   */
-  parse arguments --invoked_command=program_name -> Arguments:
+  parse arguments --invoked_command=system.program_name -> Arguments:
     return parse arguments --invoked_command=invoked_command: | error_message usage_string |
       print_on_stderr_ "$error_message"
       print_on_stderr_
@@ -130,9 +147,9 @@ class ArgumentParser:
   `usage_string`: A usage string for the whole parser, or perhaps just the subcommand the user attempted to use.
     This may be a multiline string, but it doesn't have a terminating newline.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $program_name.
+    error.  It defaults to $system.program_name.
   */
-  parse arguments --invoked_command=program_name [error_block] -> Arguments:
+  parse arguments --invoked_command=system.program_name [error_block] -> Arguments:
     try:
       return parse_ this null arguments 0
     finally: | is_exception exception |
@@ -152,9 +169,9 @@ class ArgumentParser:
   Provides a usage guide for the user.  The arguments list is
     used to limit usage to a subcommand if any.
   The $invoked_command is used only for the usage message in case of an
-    error.  It defaults to $program_name.
+    error.  It defaults to $system.program_name.
   */
-  usage arguments/List=[] --invoked_command=program_name -> string:
+  usage arguments/List=[] --invoked_command=system.program_name -> string:
     result := "Usage:"
     prefix := "$invoked_command "
     parser := this
