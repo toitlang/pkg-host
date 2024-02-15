@@ -8,6 +8,7 @@ import host.file
 import host.directory
 import host.pipe
 import host.os
+import system show platform PLATFORM-WINDOWS
 
 tool_path_ tool/string -> string:
   if platform != PLATFORM_WINDOWS: return tool

@@ -7,6 +7,7 @@ import expect show *
 import host.file
 import host.directory show *
 import writer show Writer
+import system show platform PLATFORM-WINDOWS
 
 expect_ name [code]:
   expect
