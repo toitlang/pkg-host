@@ -4,6 +4,7 @@
 
 cmake_minimum_required(VERSION 3.23)
 
+# We can't add "NONE" here, as the tests create a "crash" executable.
 project(host)
 
 enable_testing()
