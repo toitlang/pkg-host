@@ -9,35 +9,35 @@ import monitor
 import writer show Writer
 import system as sdk-system
 
-process_resource_group_ ::= process_init_
-pipe_resource_group_ ::= pipe_init_
-standard_pipes_ ::= [ null, null, null ]
+process-resource-group_ ::= process-init_
+pipe-resource-group_ ::= pipe-init_
+standard-pipes_ ::= [ null, null, null ]
 
 // Keep in sync with similar list in event_sources/subprocess.cc.
-PROCESS_EXITED_ ::= 1
-PROCESS_SIGNALLED_ ::= 2
-PROCESS_EXIT_CODE_SHIFT_ ::= 2
-PROCESS_EXIT_CODE_MASK_ ::= 0xff
-PROCESS_SIGNAL_SHIFT_ ::= 10
-PROCESS_SIGNAL_MASK_ ::= 0xff
+PROCESS-EXITED_ ::= 1
+PROCESS-SIGNALLED_ ::= 2
+PROCESS-EXIT-CODE-SHIFT_ ::= 2
+PROCESS-EXIT-CODE-MASK_ ::= 0xff
+PROCESS-SIGNAL-SHIFT_ ::= 10
+PROCESS-SIGNAL-MASK_ ::= 0xff
 
-READ_EVENT_ ::= 1 << 0
-WRITE_EVENT_ ::= 1 << 1
-CLOSE_EVENT_ ::= 1 << 2
-ERROR_EVENT_ ::= 1 << 3
+READ-EVENT_ ::= 1 << 0
+WRITE-EVENT_ ::= 1 << 1
+CLOSE-EVENT_ ::= 1 << 2
+ERROR-EVENT_ ::= 1 << 3
 
-UNKNOWN_DIRECTION_ ::= 0
-PARENT_TO_CHILD_ ::= 1
-CHILD_TO_PARENT_ ::= 2
+UNKNOWN-DIRECTION_ ::= 0
+PARENT-TO-CHILD_ ::= 1
+CHILD-TO-PARENT_ ::= 2
 
 
-get_standard_pipe_ fd/int:
-  if not standard_pipes_[fd]:
-    if file.is_open_file_ fd:
-      standard_pipes_[fd] = file.Stream.internal_ fd  // TODO: This is a private constructor.
+get-standard-pipe_ fd/int:
+  if not standard-pipes_[fd]:
+    if file.is-open-file_ fd:
+      standard-pipes_[fd] = file.Stream.internal_ fd  // TODO: This is a private constructor.
     else:
-      standard_pipes_[fd] = OpenPipe.from_std_ (fd_to_pipe_ pipe_resource_group_ fd)
-  return standard_pipes_[fd]
+      standard-pipes_[fd] = OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
+  return standard-pipes_[fd]
 
 /**
 A program may be executed with an open file descriptor.  This is similar
@@ -46,115 +46,115 @@ A program may be executed with an open file descriptor.  This is similar
   the file descriptor this function will return a $reader.Reader or writer
   object.  You are expected to know which direction the file descriptor has.
 */
-get_numbered_pipe fd/int:
+get-numbered-pipe fd/int:
   if fd < 0: throw "OUT_OF_RANGE"
   if fd <= 2: throw "Use stdin, stdout, stderr"
-  if file.is_open_file_ fd:
+  if file.is-open-file_ fd:
     return file.Stream.internal_ fd  // TODO: This is a private constructor.
   else:
-    return OpenPipe.from_std_ (fd_to_pipe_ pipe_resource_group_ fd)
+    return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
 class OpenPipe implements reader.Reader:
   resource_ := ?
   state_ := ?
   pid := null
-  child_process_name_ /string?
-  input_ /int := UNKNOWN_DIRECTION_
+  child-process-name_ /string?
+  input_ /int := UNKNOWN-DIRECTION_
 
   fd := -1  // Other end of descriptor, for child process.
 
-  constructor input/bool --child_process_name="child process":
-    group := pipe_resource_group_
-    pipe_pair := create_pipe_ group input
-    input_ = input ? PARENT_TO_CHILD_ : CHILD_TO_PARENT_
-    child_process_name_ = child_process_name
-    resource_ = pipe_pair[0]
-    fd = pipe_pair[1]
-    state_ = monitor.ResourceState_ pipe_resource_group_ resource_
+  constructor input/bool --child-process-name="child process":
+    group := pipe-resource-group_
+    pipe-pair := create-pipe_ group input
+    input_ = input ? PARENT-TO-CHILD_ : CHILD-TO-PARENT_
+    child-process-name_ = child-process-name
+    resource_ = pipe-pair[0]
+    fd = pipe-pair[1]
+    state_ = monitor.ResourceState_ pipe-resource-group_ resource_
 
-  constructor.from_std_ .resource_:
-    group := pipe_resource_group_
-    child_process_name_ = null
-    state_ = monitor.ResourceState_ pipe_resource_group_ resource_
+  constructor.from-std_ .resource_:
+    group := pipe-resource-group_
+    child-process-name_ = null
+    state_ = monitor.ResourceState_ pipe-resource-group_ resource_
 
   read -> ByteArray?:
-    if input_ == PARENT_TO_CHILD_:
+    if input_ == PARENT-TO-CHILD_:
       throw "read from an output pipe"
     while true:
-      state_.wait_for_state READ_EVENT_ | CLOSE_EVENT_
+      state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
       result := read_ resource_
       if result != -1:
         if result == null:
           try:
-            check_exit_ pid child_process_name_
+            check-exit_ pid child-process-name_
           finally:
             pid = null
         return result
-      state_.clear_state READ_EVENT_
+      state_.clear-state READ-EVENT_
 
   write x from = 0 to = x.size:
-    if input_ == CHILD_TO_PARENT_:
+    if input_ == CHILD-TO-PARENT_:
       throw "write to an input pipe"
-    state_.wait_for_state WRITE_EVENT_ | ERROR_EVENT_
-    bytes_written := write_primitive_ resource_ x from to
-    if bytes_written == 0: state_.clear_state WRITE_EVENT_
-    return bytes_written
+    state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
+    bytes-written := write-primitive_ resource_ x from to
+    if bytes-written == 0: state_.clear-state WRITE-EVENT_
+    return bytes-written
 
   close:
     close_ resource_
     if state_:
       state_.dispose
       state_ = null
-    if input_ == PARENT_TO_CHILD_:
-      check_exit_ pid child_process_name_
+    if input_ == PARENT-TO-CHILD_:
+      check-exit_ pid child-process-name_
 
-  is_a_terminal -> bool:
-    return is_a_tty_ resource_
+  is-a-terminal -> bool:
+    return is-a-tty_ resource_
 
-check_exit_ pid child_process_name/string? -> none:
-  if child_process_name == null:
-    child_process_name = "child process"
+check-exit_ pid child-process-name/string? -> none:
+  if child-process-name == null:
+    child-process-name = "child process"
   if pid:
-    exit_value := wait_for pid
-    if (exit_value & PROCESS_SIGNALLED_) != 0:
+    exit-value := wait-for pid
+    if (exit-value & PROCESS-SIGNALLED_) != 0:
       // Process crashed.
       throw
-        "$child_process_name: " +
-          signal_to_string (exit_signal exit_value)
-    code := exit_code exit_value
+        "$child-process-name: " +
+          signal-to-string (exit-signal exit-value)
+    code := exit-code exit-value
     if code != 0:
-      throw "$child_process_name: exited with status $code"
+      throw "$child-process-name: exited with status $code"
 
-pipe_fd_ resource:
+pipe-fd_ resource:
   #primitive.pipe.fd
 
-pipe_init_:
+pipe-init_:
   #primitive.pipe.init
 
-create_pipe_ resource_group input/bool:
-  #primitive.pipe.create_pipe
+create-pipe_ resource-group input/bool:
+  #primitive.pipe.create-pipe
 
-write_primitive_ pipe x from to:
+write-primitive_ pipe x from to:
   #primitive.pipe.write
 
 read_ pipe:
   #primitive.pipe.read
 
 close_ pipe:
-  return close_ pipe pipe_resource_group_
+  return close_ pipe pipe-resource-group_
 
-close_ pipe resource_group:
+close_ pipe resource-group:
   #primitive.pipe.close
 
 /// Use the stdin/stdout/stderr that the parent Toit process has.
-PIPE_INHERITED ::= -1
+PIPE-INHERITED ::= -1
 /// Create new pipe and return it.
-PIPE_CREATED ::= -2
+PIPE-CREATED ::= -2
 
-create_pipe_helper_ input_flag index result:
-  pipe_ends := OpenPipe input_flag
-  result[index] = pipe_ends
-  return pipe_ends.fd
+create-pipe-helper_ input-flag index result:
+  pipe-ends := OpenPipe input-flag
+  result[index] = pipe-ends
+  return pipe-ends.fd
 
 /**
 Forks a process.
@@ -171,31 +171,31 @@ Optionally, $environment variables can be passed as a map.
   Keys in the map should be strings, and values should be strings or null,
   where null indicates that the variable should be unset in the child
   process.
-Note that if you override the PATH environment variable, but set the $use_path
+Note that if you override the PATH environment variable, but set the $use-path
   flag, the new value of PATH will be used to find the executable.
 */
-fork use_path stdin stdout stderr command arguments -> List
+fork use-path stdin stdout stderr command arguments -> List
     --environment/Map?=null
-    --file_descriptor_3/OpenPipe?=null
-    --file_descriptor_4/OpenPipe?=null:
-  if sdk-system.platform == sdk-system.PLATFORM_WINDOWS:
-    arguments = arguments.map: windows_escape_ it
+    --file-descriptor-3/OpenPipe?=null
+    --file-descriptor-4/OpenPipe?=null:
+  if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+    arguments = arguments.map: windows-escape_ it
   result := List 4
-  flat_environment := environment ? (Array_ environment.size * 2) : null
+  flat-environment := environment ? (Array_ environment.size * 2) : null
   index := 0
   if environment: environment.do: | key value |
-    flat_environment[index++] = key.stringify
-    flat_environment[index++] = (value == null) ? null : value.stringify
+    flat-environment[index++] = key.stringify
+    flat-environment[index++] = (value == null) ? null : value.stringify
   exception := catch:
-    if stdin == PIPE_CREATED:
-      stdin = create_pipe_helper_ true 0 result
-    if stdout == PIPE_CREATED:
-      stdout = create_pipe_helper_ false 1 result
-    if stderr == PIPE_CREATED:
-      stderr = create_pipe_helper_ false 2 result
-    fd_3 := file_descriptor_3 ? file_descriptor_3.fd : -1
-    fd_4 := file_descriptor_4 ? file_descriptor_4.fd : -1
-    result[3] = fork_ process_resource_group_ use_path stdin stdout stderr fd_3 fd_4 command (Array_.ensure arguments) flat_environment
+    if stdin == PIPE-CREATED:
+      stdin = create-pipe-helper_ true 0 result
+    if stdout == PIPE-CREATED:
+      stdout = create-pipe-helper_ false 1 result
+    if stderr == PIPE-CREATED:
+      stderr = create-pipe-helper_ false 2 result
+    fd-3 := file-descriptor-3 ? file-descriptor-3.fd : -1
+    fd-4 := file-descriptor-4 ? file-descriptor-4.fd : -1
+    result[3] = fork_ process-resource-group_ use-path stdin stdout stderr fd-3 fd-4 command (Array_.ensure arguments) flat-environment
   if exception:
     // If an exception is thrown we end up here.  If the fork succeeded then
     // the pipes would be closed.  Here we have an error and need to close
@@ -210,45 +210,45 @@ fork use_path stdin stdout stderr command arguments -> List
     if result[2]:
       result[2].close
       file.close_ stderr
-    if (command.index_of " ") != -1:
+    if (command.index-of " ") != -1:
       throw "Error trying to run executable (arguments appended to filename?): '$command': $exception"
     else:
       clarification := ""
       if command.size > 0 and command[0] != '/':
-        clarification = use_path ? " using \$PATH" : " not using path"
+        clarification = use-path ? " using \$PATH" : " not using path"
       throw "Error trying to run '$command'$clarification: $exception"
   return result
 
-windows_escape_ path/string -> string:
-  if (path.index_of " ") < 0
-      and (path.index_of "\t") < 0
-      and (path.index_of "\"") < 0:
+windows-escape_ path/string -> string:
+  if (path.index-of " ") < 0
+      and (path.index-of "\t") < 0
+      and (path.index-of "\"") < 0:
     return path
   // The path contains spaces or quotes, so we have to escape.
   // Make the buffer a little larger than the path in the hope that we don't
   // have to grow it while building.
-  accumulator := bytes.Buffer.with_initial_size (path.size + 4 + (path.size >> 2))
-  accumulator.write_byte '"'  // Initial double quote.
+  accumulator := bytes.Buffer.with-initial-size (path.size + 4 + (path.size >> 2))
+  accumulator.write-byte '"'  // Initial double quote.
   backslashes := 0
   path.size.repeat:
     byte := path.at --raw it
     if byte == '"':
       // Literal double quote.  Precede with an odd number of backslashes.
-      (backslashes * 2 + 1).repeat: accumulator.write_byte '\\'
+      (backslashes * 2 + 1).repeat: accumulator.write-byte '\\'
       backslashes = 0
-      accumulator.write_byte '"'
+      accumulator.write-byte '"'
     else if byte == '\\':
       // A single backslash in the input.
       backslashes++
     else:
       // Backslashes do not need to be doubled when they do not precede a double quote.
-      backslashes.repeat: accumulator.write_byte '\\'
+      backslashes.repeat: accumulator.write-byte '\\'
       backslashes = 0
-      accumulator.write_byte byte
+      accumulator.write-byte byte
   // If there are unoutput backslashes at the end we need to double them.
-  (backslashes * 2).repeat: accumulator.write_byte '\\'
-  accumulator.write_byte '"'  // Final double quote.
-  return accumulator.bytes.to_string
+  (backslashes * 2).repeat: accumulator.write-byte '\\'
+  accumulator.write-byte '"'  // Final double quote.
+  return accumulator.bytes.to-string
 
 /// Variant of $(to arguments).
 to --environment/Map?=null command arg1 -> OpenPipe:
@@ -281,11 +281,11 @@ The $environment argument is used as in $fork.
 to --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
     return to [arguments]
-  pipe_ends := OpenPipe true --child_process_name=arguments[0]
-  stdin := pipe_ends.fd
-  pipes := fork --environment=environment true stdin PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
-  pipe_ends.pid = pipes[3]
-  return pipe_ends
+  pipe-ends := OpenPipe true --child-process-name=arguments[0]
+  stdin := pipe-ends.fd
+  pipes := fork --environment=environment true stdin PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
+  pipe-ends.pid = pipes[3]
+  return pipe-ends
 
 /// Variant of $(from arguments).
 from --environment/Map?=null command arg1 -> OpenPipe:
@@ -319,11 +319,11 @@ The $environment argument is used as in $fork.
 from --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
     return from [arguments]
-  pipe_ends := OpenPipe false --child_process_name=arguments[0]
-  stdout := pipe_ends.fd
-  pipes := fork --environment=environment true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
-  pipe_ends.pid = pipes[3]
-  return pipe_ends
+  pipe-ends := OpenPipe false --child-process-name=arguments[0]
+  stdout := pipe-ends.fd
+  pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
+  pipe-ends.pid = pipes[3]
+  return pipe-ends
 
 /// Variant of $(backticks arguments).
 backticks --environment/Map?=null command arg1 -> string:
@@ -353,31 +353,31 @@ The $environment argument is used as in $fork.
 backticks --environment/Map?=null arguments -> string:
   if arguments is string:
     return backticks --environment=environment [arguments]
-  pipe_ends := OpenPipe false
-  stdout := pipe_ends.fd
-  pipes := fork --environment=environment true PIPE_INHERITED stdout PIPE_INHERITED arguments[0] arguments
-  child_process := pipes[3]
-  reader := reader.BufferedReader pipe_ends
-  reader.buffer_all
-  output := reader.read_string (reader.buffered)
+  pipe-ends := OpenPipe false
+  stdout := pipe-ends.fd
+  pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
+  child-process := pipes[3]
+  reader := reader.BufferedReader pipe-ends
+  reader.buffer-all
+  output := reader.read-string (reader.buffered)
   try:
-    check_exit_ child_process arguments[0]
+    check-exit_ child-process arguments[0]
   finally:
-    catch: pipe_ends.close
+    catch: pipe-ends.close
   return output
 
 /**
 Returns the exit value of the process which can then be decoded into
   exit code or signal number.
 
-See $exit_code and $exit_signal.
+See $exit-code and $exit-signal.
 */
-wait_for child_process:
-  wait_for_ child_process
-  state := monitor.ResourceState_ process_resource_group_ child_process
-  exit_value := state.wait
+wait-for child-process:
+  wait-for_ child-process
+  state := monitor.ResourceState_ process-resource-group_ child-process
+  exit-value := state.wait
   state.dispose
-  return exit_value
+  return exit-value
 
 /**
 Forks a program, and returns the exit status.
@@ -385,7 +385,7 @@ A return value of zero indicates the program ran without errors.
 Uses the /bin/sh shell to parse the command, which is a single string.
 Arguments are split by the shell at unescaped whitespace.
   On Windows we just split at spaces, since the shell is not available.
-  For more complicated cases where this is insufficient, use $run_program.
+  For more complicated cases where this is insufficient, use $run-program.
 Throws an exception if the shell cannot be run, but otherwise returns the
   exit value of shell, which is the exit value of the program it ran.
 If the program run by the shell dies with a signal then the exit value is 128 +
@@ -393,26 +393,26 @@ If the program run by the shell dies with a signal then the exit value is 128 +
 The $environment argument is used as in $fork.
 */
 system --environment/Map?=null command -> int?:
-  if sdk-system.platform == sdk-system.PLATFORM_WINDOWS:
-    return run_program --environment=environment ["cmd", "/s", "/c"] + (command.split " ")
+  if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+    return run-program --environment=environment ["cmd", "/s", "/c"] + (command.split " ")
   else:
-    return run_program --environment=environment ["/bin/sh", "-c", command]
+    return run-program --environment=environment ["/bin/sh", "-c", command]
 
-/// Variant of $(run_program arguments).
-run_program --environment/Map?=null command arg1 -> int?:
-  return run_program [command, arg1]
+/// Variant of $(run-program arguments).
+run-program --environment/Map?=null command arg1 -> int?:
+  return run-program [command, arg1]
 
-/// Variant of $(run_program arguments).
-run_program --environment/Map?=null command arg1 arg2 -> int?:
-  return run_program [command, arg1, arg2]
+/// Variant of $(run-program arguments).
+run-program --environment/Map?=null command arg1 arg2 -> int?:
+  return run-program [command, arg1, arg2]
 
-/// Variant of $(run_program arguments).
-run_program --environment/Map?=null command arg1 arg2 arg3 -> int?:
-  return run_program [command, arg1, arg2, arg3]
+/// Variant of $(run-program arguments).
+run-program --environment/Map?=null command arg1 arg2 arg3 -> int?:
+  return run-program [command, arg1, arg2, arg3]
 
-/// Variant of $(run_program arguments).
-run_program --environment/Map?=null command arg1 arg2 arg3 arg4 -> int?:
-  return run_program [command, arg1, arg2, arg3, arg4]
+/// Variant of $(run-program arguments).
+run-program --environment/Map?=null command arg1 arg2 arg3 arg4 -> int?:
+  return run-program [command, arg1, arg2, arg3, arg4]
 
 /**
 Forks a program, and returns the exit status.
@@ -423,83 +423,83 @@ Throws an exception if the command cannot be run or if the command exits
   with a signal, but otherwise returns the exit value of the program.
 The $environment argument is used as in $fork.
 */
-run_program --environment/Map?=null arguments -> int:
+run-program --environment/Map?=null arguments -> int:
   if arguments is string:
-    return run_program [arguments]
-  pipes := fork --environment=environment true PIPE_INHERITED PIPE_INHERITED PIPE_INHERITED arguments[0] arguments
-  child_process := pipes[3]
-  exit_value := wait_for child_process
-  signal := exit_signal exit_value
+    return run-program [arguments]
+  pipes := fork --environment=environment true PIPE-INHERITED PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
+  child-process := pipes[3]
+  exit-value := wait-for child-process
+  signal := exit-signal exit-value
   if signal:
     throw
       "$arguments[0]: " +
-        signal_to_string signal
-  return exit_code exit_value
+        signal-to-string signal
+  return exit-code exit-value
 
 stdin:
-  return get_standard_pipe_ 0
+  return get-standard-pipe_ 0
 
 stdout:
-  return get_standard_pipe_ 1
+  return get-standard-pipe_ 1
 
 stderr:
-  return get_standard_pipe_ 2
+  return get-standard-pipe_ 2
 
-print_to_stdout message/string -> none:
-  print_to_ stdout message
+print-to-stdout message/string -> none:
+  print-to_ stdout message
 
-print_to_stderr message/string -> none:
-  print_to_ stderr message
+print-to-stderr message/string -> none:
+  print-to_ stderr message
 
 
 /**
-Decodes the exit value (of $wait_for) and returns the exit code.
+Decodes the exit value (of $wait-for) and returns the exit code.
 
-Returns null if the process exited due to an uncaught signal. Use $exit_signal
+Returns null if the process exited due to an uncaught signal. Use $exit-signal
   in that case.
 */
-exit_code exit_value/int -> int?:
-  if (exit_value & PROCESS_SIGNALLED_) != 0: return null
-  return (exit_value >> PROCESS_EXIT_CODE_SHIFT_) & PROCESS_EXIT_CODE_MASK_
+exit-code exit-value/int -> int?:
+  if (exit-value & PROCESS-SIGNALLED_) != 0: return null
+  return (exit-value >> PROCESS-EXIT-CODE-SHIFT_) & PROCESS-EXIT-CODE-MASK_
 
 /**
-Decodes the exit value (of $wait_for) and returns the exit signal.
+Decodes the exit value (of $wait-for) and returns the exit signal.
 
 Returns null if the process exited normally with an exit code, and not
-  because of an uncaught signal. Use $exit_code in that case.
+  because of an uncaught signal. Use $exit-code in that case.
 
-Use $signal_to_string to convert the signal to a string.
+Use $signal-to-string to convert the signal to a string.
 */
-exit_signal exit_value/int -> int?:
-  if (exit_value & PROCESS_SIGNALLED_) == 0: return null
-  return (exit_value >> PROCESS_SIGNAL_SHIFT_) & PROCESS_SIGNAL_MASK_
+exit-signal exit-value/int -> int?:
+  if (exit-value & PROCESS-SIGNALLED_) == 0: return null
+  return (exit-value >> PROCESS-SIGNAL-SHIFT_) & PROCESS-SIGNAL-MASK_
 
 // Temporary method, until printing to stdout is easier without allocating a `Writer`.
-print_to_ pipe msg/string:
+print-to_ pipe msg/string:
   writer := Writer pipe
   writer.write msg
   writer.write "\n"
 
-is_a_tty_ resource:
-  #primitive.pipe.is_a_tty
+is-a-tty_ resource:
+  #primitive.pipe.is-a-tty
 
-fork_ group use_path stdin stdout stderr fd_3 fd_4 command arguments environment:
+fork_ group use-path stdin stdout stderr fd-3 fd-4 command arguments environment:
   #primitive.pipe.fork2
 
-fd_to_pipe_ resource_group fd:
-  #primitive.pipe.fd_to_pipe
+fd-to-pipe_ resource-group fd:
+  #primitive.pipe.fd-to-pipe
 
-process_init_:
+process-init_:
   #primitive.subprocess.init
 
-dont_wait_for subprocess -> none:
-  #primitive.subprocess.dont_wait_for
+dont-wait-for subprocess -> none:
+  #primitive.subprocess.dont-wait-for
 
-wait_for_ subprocess -> none:
-  #primitive.subprocess.wait_for
+wait-for_ subprocess -> none:
+  #primitive.subprocess.wait-for
 
 kill_ subprocess signal:
   #primitive.subprocess.kill
 
-signal_to_string signal:
+signal-to-string signal:
   #primitive.subprocess.strsignal

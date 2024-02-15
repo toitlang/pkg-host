@@ -27,14 +27,14 @@ expand src -> string:
     else:
       var := part
       rest := ""
-      close := part.index_of ")"
+      close := part.index-of ")"
       if part[0] == '(' and close != -1:
         var = part[1..close]
         rest = part[close + 1 ..]
       else:
         for i := 0; i < part.size; i++:
           c := part[i]
-          if not is_identifier c:
+          if not is-identifier c:
             var = part[0..i]
             rest = part[i..]
             break
@@ -43,7 +43,7 @@ expand src -> string:
       result.add rest
   return result.join ""
 
-is_identifier c/int  -> bool:
+is-identifier c/int  -> bool:
   if 'a' <= c <= 'z': return true
   if 'A' <= c <= 'Z': return true
   if c == '_': return true

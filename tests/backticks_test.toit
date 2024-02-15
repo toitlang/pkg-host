@@ -12,14 +12,14 @@ main args:
     print "Usage: block_std_test.toit <toit_exe>"
     exit 1
 
-  toit_exe := args[0]
+  toit-exe := args[0]
 
   version/string? := null
 
   // Try to run the toit executable.
-  exception := catch: version = pipe.backticks toit_exe "--version"
+  exception := catch: version = pipe.backticks toit-exe "--version"
   if exception:
-    print "Running the given toit executable '$toit_exe' failed: $exception"
+    print "Running the given toit executable '$toit-exe' failed: $exception"
     exit 1
 
   print version

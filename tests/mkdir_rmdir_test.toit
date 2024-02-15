@@ -8,51 +8,51 @@ import system
 import host.file
 import host.directory show *
 
-with_tmp_dir [block]:
-  tmp_dir := mkdtemp
+with-tmp-dir [block]:
+  tmp-dir := mkdtemp
   try:
-    block.call tmp_dir
+    block.call tmp-dir
   finally:
-    rmdir --recursive tmp_dir
+    rmdir --recursive tmp-dir
 
 main:
-  with_tmp_dir: | tmp_dir |
+  with-tmp-dir: | tmp-dir |
     ["test-foo", "test-føo", "test-f€o", "test-f😀o"].do: | name |
       // Create relative directory in the current working directory.
       // Pollutes the current working directory, but we want to test
       // relative directory creation.
       print "Make $name"
       mkdir name
-      expect (file.is_directory name)
+      expect (file.is-directory name)
       print "Remove name"
       rmdir name
-      expect_not (file.is_directory name)
+      expect-not (file.is-directory name)
 
-      tmp_name := "$tmp_dir/$name"
-      print "Make $tmp_name"
-      mkdir tmp_name
-      expect (file.is_directory tmp_name)
-      print "Remove $tmp_dir/name"
-      rmdir tmp_name
-      expect_not (file.is_directory name)
+      tmp-name := "$tmp-dir/$name"
+      print "Make $tmp-name"
+      mkdir tmp-name
+      expect (file.is-directory tmp-name)
+      print "Remove $tmp-dir/name"
+      rmdir tmp-name
+      expect-not (file.is-directory name)
 
     mkdir --recursive "test-foo/bar/gee"
-    expect (file.is_directory "test-foo/bar/gee")
+    expect (file.is-directory "test-foo/bar/gee")
     rmdir --recursive "test-foo"
-    expect_not (file.is_directory "test-foo")
+    expect-not (file.is-directory "test-foo")
 
-    mkdir --recursive "$tmp_dir/test-foo/bar/gee"
-    expect (file.is_directory "$tmp_dir/test-foo/bar/gee")
-    rmdir --recursive "$tmp_dir/test-foo"
-    expect_not (file.is_directory "$tmp_dir/test-foo")
+    mkdir --recursive "$tmp-dir/test-foo/bar/gee"
+    expect (file.is-directory "$tmp-dir/test-foo/bar/gee")
+    rmdir --recursive "$tmp-dir/test-foo"
+    expect-not (file.is-directory "$tmp-dir/test-foo")
 
     if system.platform == system.PLATFORM-WINDOWS:
       mkdir --recursive "test-foo\\bar\\gee"
-      expect (file.is_directory "test-foo\\bar\\gee")
+      expect (file.is-directory "test-foo\\bar\\gee")
       rmdir --recursive "test-foo"
-      expect_not (file.is_directory "test-foo")
+      expect-not (file.is-directory "test-foo")
 
-      mkdir --recursive "$tmp_dir\\test-foo\\bar\\gee"
-      expect (file.is_directory "$tmp_dir\\test-foo\\bar\\gee")
-      rmdir --recursive "$tmp_dir\\test-foo"
-      expect_not (file.is_directory "$tmp_dir\\test-foo")
+      mkdir --recursive "$tmp-dir\\test-foo\\bar\\gee"
+      expect (file.is-directory "$tmp-dir\\test-foo\\bar\\gee")
+      rmdir --recursive "$tmp-dir\\test-foo"
+      expect-not (file.is-directory "$tmp-dir\\test-foo")

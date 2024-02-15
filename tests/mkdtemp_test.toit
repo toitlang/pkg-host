@@ -8,27 +8,27 @@ import host.file
 
 main:
   // Make a temporary directory in the current dir.
-  tmp_dir := directory.mkdtemp "foo-"
-  expect (file.is_directory tmp_dir)
+  tmp-dir := directory.mkdtemp "foo-"
+  expect (file.is-directory tmp-dir)
 
-  directory.chdir tmp_dir
+  directory.chdir tmp-dir
   // Make a regular directory in the current dir.
   // We would like to use directory.mkdtemp, but that doesn't work with
   //   relative paths after a chdir.
-  tmp_dir2 := "bar-xxx"
-  directory.mkdir tmp_dir2
+  tmp-dir2 := "bar-xxx"
+  directory.mkdir tmp-dir2
 
   directory.chdir ".."
 
-  dir := directory.DirectoryStream tmp_dir
-  bar_name := dir.next
+  dir := directory.DirectoryStream tmp-dir
+  bar-name := dir.next
   expect
-      bar_name.starts_with "bar-"
+      bar-name.starts-with "bar-"
 
-  directory.rmdir "$tmp_dir/$tmp_dir2"
-  directory.rmdir tmp_dir
+  directory.rmdir "$tmp-dir/$tmp-dir2"
+  directory.rmdir tmp-dir
 
   // Make a temporary directory in the system dir.
-  tmp_dir = directory.mkdtemp "/tmp/foo-"
-  expect (file.is_directory tmp_dir)
-  directory.rmdir tmp_dir
+  tmp-dir = directory.mkdtemp "/tmp/foo-"
+  expect (file.is-directory tmp-dir)
+  directory.rmdir tmp-dir

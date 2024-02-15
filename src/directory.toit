@@ -29,10 +29,10 @@ rmdir path/string --recursive/bool -> none:
   stream := DirectoryStream path
   while entry := stream.next:
     child := "$path/$entry"
-    type := (file.stat --no-follow_links child)[file.ST_TYPE]
+    type := (file.stat --no-follow-links child)[file.ST-TYPE]
     if type == file.DIRECTORY:
       rmdir --recursive child
-    else if type == file.DIRECTORY_SYMBOLIC_LINK:
+    else if type == file.DIRECTORY-SYMBOLIC-LINK:
       rmdir child  // Windows special handling of symbolic links to a directory.
     else:
       file.delete child
@@ -64,14 +64,14 @@ mkdir --recursive/bool path/string mode/int=0x1ff -> none:
   if system.platform == system.PLATFORM-WINDOWS:
     path = path.replace --all "\\" "/"
 
-  built_path := ""
+  built-path := ""
   parts := path.split "/"
   parts.size.repeat:
     part := parts[it]
-    built_path += "$part"
-    if part != "" and not file.is_directory built_path:
-      mkdir built_path mode
-    built_path += "/"
+    built-path += "$part"
+    if part != "" and not file.is-directory built-path:
+      mkdir built-path mode
+    built-path += "/"
 
 /**
 Creates a fresh directory with the given prefix.
@@ -94,7 +94,7 @@ print test_dir  // => "/tmp/test-1v42wp"  (for example).
 ```
 */
 mkdtemp prefix/string="" -> string:
-  return (mkdtemp_ prefix).to_string
+  return (mkdtemp_ prefix).to-string
 
 mkdtemp_ prefix/string -> ByteArray:
   #primitive.file.mkdtemp
@@ -107,11 +107,11 @@ chdir name:
 // An open directory, used to iterate over the named entries in a directory.
 class DirectoryStream:
   dir_ := null
-  is_closed_/bool := false
+  is-closed_/bool := false
 
   constructor name:
     error := catch:
-      dir_ = opendir_ resource_freeing_module_ name
+      dir_ = opendir_ resource-freeing-module_ name
     if error is string:
       throw "$error: \"$name\""
     else if error:
@@ -124,7 +124,7 @@ class DirectoryStream:
   Returns null when no entries are left.
   */
   next -> string?:
-    if is_closed_: throw "ALREADY_CLOSED"
+    if is-closed_: throw "ALREADY_CLOSED"
     // We automatically dispose the underlying resource when
     // we reach the end of the stream. In that case, we return
     // null because we know that no more entries are left.
@@ -135,12 +135,12 @@ class DirectoryStream:
       if not bytes:
         dispose_
         return null
-      str := bytes.to_string
+      str := bytes.to-string
       if str == "." or str == "..": continue
       return str
 
   close -> none:
-    is_closed_ = true
+    is-closed_ = true
     dispose_
 
   dispose_ -> none:
@@ -148,9 +148,9 @@ class DirectoryStream:
     if not dir: return
     dir_ = null
     closedir_ dir
-    remove_finalizer this
+    remove-finalizer this
 
-opendir_ resource_group name:
+opendir_ resource-group name:
   #primitive.file.opendir2
 
 readdir_ directory -> ByteArray:
@@ -159,14 +159,14 @@ readdir_ directory -> ByteArray:
 closedir_ directory:
   #primitive.file.closedir
 
-same_entry_ a b:
-  if a[file.ST_INO] != b[file.ST_INO]: return false
-  return a[file.ST_DEV] == b[file.ST_DEV]
+same-entry_ a b:
+  if a[file.ST-INO] != b[file.ST-INO]: return false
+  return a[file.ST-DEV] == b[file.ST-DEV]
 
-is_absolute_ path:
-  if path.starts_with "/": return true
-  if system.platform == system.PLATFORM_WINDOWS:
-    if path.starts_with "//" or path.starts_with "\\\\": return true
+is-absolute_ path:
+  if path.starts-with "/": return true
+  if system.platform == system.PLATFORM-WINDOWS:
+    if path.starts-with "//" or path.starts-with "\\\\": return true
     if path.size >= 3 and path[1] == ':': return true
   return false
 
@@ -179,7 +179,7 @@ realpath path:
   // Relative paths must be prepended with the current directory, and we can't
   // let the C realpath routine do that for us, because it doesn't understand
   // what our current directory is.
-  if not is_absolute_ path:
+  if not is-absolute_ path:
     path = "$cwd/$path"
   #primitive.file.realpath
 
@@ -193,15 +193,15 @@ cwd:
     pos := ""
     while true:
       dot := file.stat "$(pos)."
-      dot_dot := file.stat "$(pos).."
-      if same_entry_ dot dot_dot:
+      dot-dot := file.stat "$(pos).."
+      if same-entry_ dot dot-dot:
         return dir == "" ? "/" : dir
       found := false
       above := DirectoryStream "$(pos).."
       while name := above.next:
-        name_stat := file.stat "$(pos)../$name" --follow_links=false
-        if name_stat:
-          if same_entry_ name_stat dot:
+        name-stat := file.stat "$(pos)../$name" --follow-links=false
+        if name-stat:
+          if same-entry_ name-stat dot:
             dir = "/$name$dir"
             found = true
             break

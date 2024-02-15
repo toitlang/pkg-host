@@ -10,33 +10,33 @@ import system
 
 main:
   // Make a temporary directory in the current dir.
-  tmp_dir := directory.mkdtemp "/tmp/foo-"
-  expect (file.is_directory tmp_dir)
+  tmp-dir := directory.mkdtemp "/tmp/foo-"
+  expect (file.is-directory tmp-dir)
 
-  directory.chdir tmp_dir
-  file.write_content "asdsd" --path="test"
+  directory.chdir tmp-dir
+  file.write-content "asdsd" --path="test"
   try:
-    if system.platform == system.PLATFORM_WINDOWS:
+    if system.platform == system.PLATFORM-WINDOWS:
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-READONLY
-      expect_equals file.WINDOWS-FILE-ATTRIBUTE-READONLY (file.stat "test")[file.ST_MODE]
+      expect-equals file.WINDOWS-FILE-ATTRIBUTE-READONLY (file.stat "test")[file.ST-MODE]
 
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-NORMAL
-      expect_equals file.WINDOWS-FILE-ATTRIBUTE-NORMAL (file.stat "test")[file.ST_MODE]
+      expect-equals file.WINDOWS-FILE-ATTRIBUTE-NORMAL (file.stat "test")[file.ST-MODE]
 
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE
-      expect_equals file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE (file.stat "test")[file.ST_MODE]
+      expect-equals file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE (file.stat "test")[file.ST-MODE]
 
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-HIDDEN
-      expect_equals file.WINDOWS-FILE-ATTRIBUTE-HIDDEN (file.stat "test")[file.ST_MODE]
+      expect-equals file.WINDOWS-FILE-ATTRIBUTE-HIDDEN (file.stat "test")[file.ST-MODE]
 
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-SYSTEM
-      expect_equals file.WINDOWS-FILE-ATTRIBUTE-SYSTEM (file.stat "test")[file.ST_MODE]
+      expect-equals file.WINDOWS-FILE-ATTRIBUTE-SYSTEM (file.stat "test")[file.ST-MODE]
     else:
       file.chmod "test" 0b100_100_100
-      expect_equals 0b100100100 (file.stat "test")[file.ST_MODE]
+      expect-equals 0b100100100 (file.stat "test")[file.ST-MODE]
       file.chmod "test" 0b100_000_000
-      expect_equals 0b100000000 (file.stat "test")[file.ST_MODE]
+      expect-equals 0b100000000 (file.stat "test")[file.ST-MODE]
       file.chmod "test" 0b110_000_000
-      expect_equals 0b110_000_000 (file.stat "test")[file.ST_MODE]
+      expect-equals 0b110_000_000 (file.stat "test")[file.ST-MODE]
   finally:
-    directory.rmdir tmp_dir --recursive
+    directory.rmdir tmp-dir --recursive
