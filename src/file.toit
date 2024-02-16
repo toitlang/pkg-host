@@ -430,6 +430,11 @@ copy_ --source/string --target/string --dereference/bool --recursive/bool --queu
     // dereference the link or not. If we are here, then we do not dereference
     // and should thus copy the link.
     link-target := readlink source
+    if system.platform == system.PLATFORM-WINDOWS:
+      // Work around https://github.com/toitlang/toit/issues/2090, where reading
+      // an absolute symlink starts with '\??\' which Toit can't deal with if
+      // written as value of a link.
+      if link-target.starts-with "\\??\\": link-target = link-target[4..]
     link-type := type == DIRECTORY-SYMBOLIC-LINK
         ? LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
         : LINK-TYPE-SYMBOLIC_
