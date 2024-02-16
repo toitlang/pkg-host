@@ -26,9 +26,6 @@ expect-already-closed [code]:
   expect_ "ALREADY_CLOSED" code
 
 main:
-  // This test does not work on ESP32 since there is no file system!
-  if platform == "FreeRTOS": return
-
   expect-file-not-found: file.Stream.for-read "mkfxz.not_there"
   expect-file-not-found: file.Stream "mkfxz.not_there" file.RDONLY
   expect-invalid-argument: file.Stream "any name" file.CREAT       // Can't create a file without permissions.

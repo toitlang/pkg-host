@@ -9,18 +9,17 @@ import host.file
 import host.directory show *
 
 with-tmp-dir [block]:
-  tmp-dir := mkdtemp
+  tmp-dir := mkdtemp "/tmp/mkdir-rmdir-test-"
   try:
     block.call tmp-dir
   finally:
-    rmdir --recursive tmp-dir
+    rmdir --recursive --force tmp-dir
 
 main:
   with-tmp-dir: | tmp-dir |
+    chdir tmp-dir
+
     ["test-foo", "test-føo", "test-f€o", "test-f😀o"].do: | name |
-      // Create relative directory in the current working directory.
-      // Pollutes the current working directory, but we want to test
-      // relative directory creation.
       print "Make $name"
       mkdir name
       expect (file.is-directory name)
@@ -56,3 +55,41 @@ main:
       expect (file.is-directory "$tmp-dir\\test-foo\\bar\\gee")
       rmdir --recursive "$tmp-dir\\test-foo"
       expect-not (file.is-directory "$tmp-dir\\test-foo")
+
+    // Test permissions.
+    dir0 := "$tmp-dir/perm0"
+    mkdir dir0
+    file.write-content --path="$dir0/file1" "content"
+    dir1 := "$dir0/perm1"
+    mkdir dir1
+    file.write-content --path="$dir1/file" "content"
+
+    old-stat0 := file.stat dir0
+    old-stat1 := file.stat dir1
+    if system.platform == system.PLATFORM-WINDOWS:
+      new-permissions := file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-READONLY
+      file.chmod dir1 new-permissions
+    else:
+      new-permissions := 0b000_000_000
+      file.chmod dir1 new-permissions
+
+    exception := catch:
+      rmdir dir0 --recursive
+    expect-not-null exception
+
+    rmdir dir0 --recursive --force
+
+    // Test symbolic link.
+    sym-file-target := "$tmp-dir/sym-file-target"
+    sym-dir-target := "$tmp-dir/sym-dir-target"
+    file.write-content --path=sym-file-target "content"
+    mkdir sym-dir-target
+
+    sub-dir := "$tmp-dir/sub-dir"
+    mkdir sub-dir
+    file.link --source="$sub-dir/sym-file" --target=sym-file-target
+    file.link --source="$sub-dir/sym-dir" --target=sym-dir-target
+    rmdir --recursive sub-dir
+    // Neither the file nor the directory should be removed.
+    expect (file.is-file sym-file-target)
+    expect (file.is-directory sym-dir-target)

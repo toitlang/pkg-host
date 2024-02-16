@@ -21,23 +21,62 @@ rmdir path/string -> none:
 Removes the directory and all its content.
 
 Does not follow symlinks, but removes the symlink itself.
+
+If $force is true, also deletes files in read-only directories. This has
+  only an effect when $recursive is set.
 */
-rmdir path/string --recursive/bool -> none:
+rmdir path/string --recursive/bool --force/bool=false -> none:
   if not recursive:
     rmdir path
     return
-  stream := DirectoryStream path
-  while entry := stream.next:
-    child := "$path/$entry"
-    type := (file.stat --no-follow-links child)[file.ST-TYPE]
-    if type == file.DIRECTORY:
-      rmdir --recursive child
-    else if type == file.DIRECTORY-SYMBOLIC-LINK:
-      rmdir child  // Windows special handling of symbolic links to a directory.
+  dir-stat := file.stat --no-follow-links path
+  if dir-stat[file.ST-TYPE] != file.DIRECTORY:
+    throw "NOT_A_DIRECTORY"
+
+  // A queue of directories to delete. Each entry is a pair of a path and a
+  // boolean indicating whether the directory is known to be empty.
+  queue := Deque
+  queue.add [path, false]
+  while not queue.is-empty:
+    queue-entry := queue.last
+    path = queue-entry[0]
+    is-empty := queue-entry[1]
+    if force:
+      // Catch any exception in case we don't have the rights to change the
+      // permissions. In that case we will fail when we need to delete a file later.
+      catch:
+        dir-stat = file.stat --no-follow-links path
+        if system.platform == system.PLATFORM-WINDOWS:
+          if dir-stat[file.ST-MODE] & file.WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+            file.chmod path (dir-stat[file.ST-MODE] & ~file.WINDOWS-FILE-ATTRIBUTE-READONLY)
+        else:
+          if dir-stat[file.ST-MODE] & 0b111_000_000 != 0b111_000_000:
+            file.chmod path (dir-stat[file.ST-MODE] | 0b111_000_000)
+    if not is-empty:
+      is-empty = true
+      stream := DirectoryStream path
+      try:
+        while entry := stream.next:
+          child := "$path/$entry"
+          type := (file.stat --no-follow-links child)[file.ST-TYPE]
+          if type == file.DIRECTORY:
+            queue.add [child, false]
+            is-empty = false
+          else if type == file.DIRECTORY-SYMBOLIC-LINK:
+            // Windows special handling of symbolic links to a directory.
+            // Note that the `rmdir` is not recursive.
+            rmdir child
+          else:
+            file.delete child
+      finally:
+        stream.close
+    if is-empty:
+      queue.remove-last
+      rmdir path
     else:
-      file.delete child
-  stream.close
-  rmdir path
+      // The next time we see this entry, we know it's empty, as
+      // all children will have been removed.
+      queue-entry[1] = true
 
 /**
 Creates an empty directory.

@@ -278,8 +278,6 @@ Creates a soft link from $source to a $target file.
 */
 link --file/bool --source/string --target/string -> none:
   if not file: throw "INVALID_ARGUMENT"
-  if is-directory target:
-    throw "Target is a directory"
   link_ source target LINK-TYPE-SYMBOLIC_
 
 /**
@@ -287,8 +285,6 @@ Creates a soft link from $source to a $target directory.
 */
 link --directory/bool --source/string --target/string -> none:
   if not directory: throw "INVALID_ARGUMENT"
-  if is-file target:
-    throw "Target is a file"
   if system.platform == system.PLATFORM-WINDOWS:
     link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
@@ -301,8 +297,12 @@ It will automatically choose the correct type of link (file or directory) based
   on the type of $target.
 */
 link --source/string --target/string -> none:
-  if not stat target: throw "TARGET_NOT_FOUND"
-  if is-directory target and system.platform == system.PLATFORM-WINDOWS:
+  rooted-path := target
+  if not is-rooted_ rooted-path:
+    // We need to make the path relative to the source.
+    rooted-path = "$(dirname_ source)/$target"
+  if not stat rooted-path: throw "TARGET_NOT_FOUND"
+  if is-directory rooted-path and system.platform == system.PLATFORM-WINDOWS:
     link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
     link_ source target LINK-TYPE-SYMBOLIC_
@@ -336,3 +336,152 @@ Changes filesystem permissions for the file $name to $permissions.
 */
 chmod name/string permissions/int:
   #primitive.file.chmod
+
+/**
+Copies $source to $target.
+
+If $target is a directory, then takes the basename of $source and appends it to
+  $target.
+
+The location for $target must exist. That is, when copying to `foo/bar`, `foo`
+  must exist.
+
+If $dereference is true, then symbolic links are followed.
+
+If $recursive is true, then directories are copied recursively. If $recursive is
+  false, then $source must be a file.
+*/
+copy --source/string --target/string --dereference/bool=false --recursive/bool=false -> none:
+  // A queue for pending recursive copies.
+  queue := Deque
+  if is-directory target:
+    target = "$target/$(basename_ source)"
+
+  copy_ --source=source --target=target --dereference=dereference --recursive=recursive --queue=queue
+  while not queue.is-empty:
+    next := queue.remove-first
+    new-source := next[0]
+    new-target := next[1]
+    target-stat := stat new-target
+    if not target-stat:
+      throw "Target directory '$new-target' does not exist"
+    target-permissions := target-stat[ST-MODE]
+    // If the The directory was marked as read-only.
+    // Temporarily change the permissions to be able to copy the directory.
+    if system.platform != system.PLATFORM-WINDOWS and target-permissions & 0b010_000_000 != 0b010_000_000:
+      chmod new-target (target-permissions | 0b010_000_000)
+    else if system.platform == system.PLATFORM-WINDOWS and target-permissions & WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+      // The directory was marked as read-only.
+      // Temporarily change the permissions to be able to copy the directory.
+      target-permissions = target-stat[ST-MODE]
+      chmod new-target (target-permissions & ~WINDOWS-FILE-ATTRIBUTE-READONLY)
+    else:
+      // Mark as not needing any chmod.
+      target-permissions = -1
+
+    directory-stream := DirectoryStream new-source
+    try:
+      while entry := directory-stream.next:
+        copy_
+            --source="$new-source/$entry"
+            --target="$new-target/$entry"
+            --dereference=dereference
+            --recursive=recursive
+            --queue=queue
+    finally:
+      directory-stream.close
+      if target-permissions != -1:
+        // Make the directory read-only again.
+        chmod new-target target-permissions
+
+/**
+Copies $source to $target.
+
+The given $queue is filled with pending recursive copies. Each entry in the $queue
+  is a pair of source, target, where both are directories that exist.
+*/
+copy_ --source/string --target/string --dereference/bool --recursive/bool --queue/Deque -> none:
+  source-stat := stat source --follow-links=dereference
+  if not source-stat:
+    throw "File/directory $source not found"
+  target-stat := stat target
+  if target-stat:
+    throw "'$target' already exists"
+
+  type := source-stat[ST-TYPE]
+  if type == SYMBOLIC-LINK or type == DIRECTORY-SYMBOLIC-LINK:
+    // When taking the stat of the source we already declared whether we
+    // dereference the link or not. If we are here, then we do not dereference
+    // and should thus copy the link.
+    link-target := readlink source
+    link-type := type == DIRECTORY-SYMBOLIC-LINK
+        ? LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
+        : LINK-TYPE-SYMBOLIC_
+    link_ target link-target link-type
+    return
+
+  if type == DIRECTORY:
+    if not recursive:
+      throw "Cannot copy directory '$source' without --recursive"
+    mkdir target source-stat[ST-MODE]
+    queue.add [source, target]
+    return
+
+  in-stream := Stream.for-read source
+  out-stream := Stream.for-write target --permissions=source-stat[ST-MODE]
+  out-writer := Writer out-stream
+  try:
+    while data := in-stream.read:
+      out-writer.write data
+  finally:
+    in-stream.close
+    out-writer.close
+
+/**
+Returns the directory part of the given $path.
+This is a simplified version of `dirname`, as it doesn't take into
+  account complicated roots (specifically on Windows).
+
+A complete version is in the 'fs' package.
+*/
+dirname_ path/string -> string:
+  if path == "/": return "/"
+  if path == "": return "."
+  if path[path.size - 1] == '/': path = path[0..path.size - 2]
+  last-separator := path.index-of --last "/"
+  if system.platform == system.PLATFORM-WINDOWS:
+    last-separator = max (path.index-of --last "\\") last-separator
+  if last-separator == -1: return "."
+  return path[0..last-separator]
+
+/**
+Returns the base name of the given $path.
+This is a simplified version of `basename`, as it doesn't take into
+  account complicated roots (specifically on Windows).
+
+A complete version is in the 'fs' package.
+*/
+basename_ path/string -> string:
+  if path == "/": return "/"
+  if path == "": return "."
+  if path[path.size - 1] == '/': path = path[0..path.size - 2]
+  last-separator := path.index-of --last "/"
+  if system.platform == system.PLATFORM-WINDOWS:
+    last-separator = max (path.index-of --last "\\") last-separator
+  if last-separator == -1: return path
+  return path[last-separator + 1..]
+
+is-volume-letter_ letter/int -> bool:
+  return 'a' <= letter <= 'z' or 'A' <= letter <= 'Z'
+
+/**
+Returns whether the given $path is rooted.
+On Linux and macOS, this means that the path is absolute.
+On Windows this means that the path is absolute or starts with a volume letter,
+  even if it isn't absolute (like `C:foo`).
+*/
+is-rooted_ path/string -> bool:
+  if system.platform == system.PLATFORM-WINDOWS:
+    if path.starts-with "\\" or path.starts-with "/": return true
+    return path.size >= 2 and is-volume-letter_ path[0] and path[1] == ':'
+  return path.starts-with "/"
