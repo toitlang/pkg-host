@@ -278,6 +278,11 @@ Creates a soft link from $source to a $target file.
 */
 link --file/bool --source/string --target/string -> none:
   if not file: throw "INVALID_ARGUMENT"
+  if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
   link_ source target LINK-TYPE-SYMBOLIC_
 
 /**
@@ -286,6 +291,10 @@ Creates a soft link from $source to a $target directory.
 link --directory/bool --source/string --target/string -> none:
   if not directory: throw "INVALID_ARGUMENT"
   if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
     link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
     link_ source target LINK-TYPE-SYMBOLIC_
@@ -302,6 +311,13 @@ link --source/string --target/string -> none:
     // We need to make the path relative to the source.
     rooted-path = "$(dirname_ source)/$target"
   if not stat rooted-path: throw "TARGET_NOT_FOUND"
+
+  if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
+
   if is-directory rooted-path and system.platform == system.PLATFORM-WINDOWS:
     link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
   else:
