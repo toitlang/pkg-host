@@ -45,12 +45,6 @@ main:
     // Test that we can't auto detect link type if the target does not exist.
     expect-throw "TARGET_NOT_FOUND": file.link --source="test-file" --target="test-file-that-does-not-exist"
 
-    // Test that we can't make a file link to a directory.
-    expect-throw "Target is a directory": file.link --file --source="foo" --target="test-dir"
-
-    // Test that we can't make a directory link to a file.
-    expect-throw "Target is a file": file.link --directory --source="foo" --target="test-file"
-
     // Test that we can't make a hard link to a directory.
     expect-throw "PERMISSION_DENIED": file.link --hard --source="hard-link-to-dir" --target="test-dir"
 
@@ -69,5 +63,23 @@ main:
     file.delete "test-file"
     expect-equals CONTENT.to-byte-array (file.read-content "test-file-hard-link")
     expect-throw "FILE_NOT_FOUND: \"test-file-soft-link\"" : file.read-content "test-file-soft-link"
+
+    new-content := "new-content".to-byte-array
+    file.write-content new-content --path="test-file"
+
+    // Test relative links that isn't relative to the current directory.
+    subdir := "$tmp-dir/subdir"
+    directory.mkdir subdir
+    file.link --file --source="$subdir/relative-link" --target="../test-file"
+    expect-equals new-content (file.read-content "$subdir/relative-link")
+    file.link --source="$subdir/relative-link2" --target="../test-file"
+    expect-equals new-content (file.read-content "$subdir/relative-link2")
+
+    // Same for directories.
+    file.link --directory --source="$subdir/relative-dir-link" --target=".."
+    expect-equals new-content (file.read-content "$subdir/relative-dir-link/test-file")
+    file.link --source="$subdir/relative-dir-link2" --target=".."
+    expect-equals new-content (file.read-content "$subdir/relative-dir-link2/test-file")
+
   finally:
     directory.rmdir tmp-dir --recursive
