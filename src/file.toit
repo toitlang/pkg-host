@@ -382,14 +382,15 @@ copy --source/string --target/string --dereference/bool=false --recursive/bool=f
     if not target-stat:
       throw "Target directory '$new-target' does not exist"
     target-permissions := target-stat[ST-MODE]
+    is-windows := system.platform == system.PLATFORM-WINDOWS
     // If the The directory was marked as read-only.
     // Temporarily change the permissions to be able to copy the directory.
-    if system.platform != system.PLATFORM-WINDOWS and target-permissions & 0b010_000_000 != 0b010_000_000:
-      chmod new-target (target-permissions | 0b010_000_000)
-    else if system.platform == system.PLATFORM-WINDOWS and target-permissions & WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+    OWNER-WRITE ::= 0b010_000_000
+    if not is-windows and target-permissions & OWNER-WRITE != OWNER-WRITE:
+      chmod new-target (target-permissions | OWNER-WRITE)
+    else if is-windows and target-permissions & WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
       // The directory was marked as read-only.
       // Temporarily change the permissions to be able to copy the directory.
-      target-permissions = target-stat[ST-MODE]
       chmod new-target (target-permissions & ~WINDOWS-FILE-ATTRIBUTE-READONLY)
     else:
       // Mark as not needing any chmod.

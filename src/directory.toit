@@ -22,8 +22,8 @@ Removes the directory and all its content.
 
 Does not follow symlinks, but removes the symlink itself.
 
-If $force is true, also deletes files in read-only directories. This has
-  only an effect when $recursive is set.
+If $force is true, also deletes files in read-only directories. This only
+  has an effect when $recursive is set.
 */
 rmdir path/string --recursive/bool --force/bool=false -> none:
   if not recursive:
@@ -46,12 +46,14 @@ rmdir path/string --recursive/bool --force/bool=false -> none:
       // permissions. In that case we will fail when we need to delete a file later.
       catch:
         dir-stat = file.stat --no-follow-links path
+        permissions := dir-stat[file.ST-MODE]
         if system.platform == system.PLATFORM-WINDOWS:
-          if dir-stat[file.ST-MODE] & file.WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+          if permissions & file.WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
             file.chmod path (dir-stat[file.ST-MODE] & ~file.WINDOWS-FILE-ATTRIBUTE-READONLY)
         else:
-          if dir-stat[file.ST-MODE] & 0b111_000_000 != 0b111_000_000:
-            file.chmod path (dir-stat[file.ST-MODE] | 0b111_000_000)
+          OWNER-READ-WRITE-SEARCH := 0b111_000_000
+          if permissions & OWNER-READ-WRITE-SEARCH != OWNER-READ-WRITE-SEARCH:
+            file.chmod path (dir-stat[file.ST-MODE] | OWNER-READ-WRITE-SEARCH)
     if not is-empty:
       is-empty = true
       stream := DirectoryStream path
