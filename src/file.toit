@@ -336,16 +336,18 @@ Reads the destination of the link $name
 readlink name/string -> string:
   #primitive.file.readlink
 
-/** Windows specific attribute for read-only files */
-WINDOWS-FILE-ATTRIBUTE-READONLY ::= 0x01
-/** Windows specific attribute for hidden files */
-WINDOWS-FILE-ATTRIBUTE-HIDDEN   ::= 0x02
-/** Windows specific attribute for system files */
-WINDOWS-FILE-ATTRIBUTE-SYSTEM   ::= 0x04
-/** Windows specific attribute for normal files */
-WINDOWS-FILE-ATTRIBUTE-NORMAL   ::= 0x80
-/** Windows specific attribute for archive files */
-WINDOWS-FILE-ATTRIBUTE-ARCHIVE  ::= 0x20
+/** Windows specific attribute for read-only files. */
+WINDOWS-FILE-ATTRIBUTE-READONLY  ::= 0x01
+/** Windows specific attribute for hidden files. */
+WINDOWS-FILE-ATTRIBUTE-HIDDEN    ::= 0x02
+/** Windows specific attribute for system files. */
+WINDOWS-FILE-ATTRIBUTE-SYSTEM    ::= 0x04
+/** Windows specific attribute for sub directories. */
+WINDOWS-FILE-ATTRIBUTE-DIRECTORY ::= 0x10
+/** Windows specific attribute for archive files. */
+WINDOWS-FILE-ATTRIBUTE-ARCHIVE   ::= 0x20
+/** Windows specific attribute for normal files. */
+WINDOWS-FILE-ATTRIBUTE-NORMAL    ::= 0x80
 
 /**
 Changes filesystem permissions for the file $name to $permissions.
@@ -419,6 +421,8 @@ copy --source/string --target/string --dereference/bool=false --recursive/bool=f
         // Make the directory read-only again.
         chmod new-target target-permissions
 
+SPECIAL-WINDOWS-PERMISSIONS_ ::= WINDOWS-FILE-ATTRIBUTE-READONLY | WINDOWS-FILE-ATTRIBUTE-HIDDEN
+
 /**
 Copies $source to $target.
 
@@ -432,9 +436,12 @@ copy_ -> none
     --recursive/bool
     --queue/Deque
     --allow-existing-target-directory/bool:
+  is-windows := system.platform == system.PLATFORM-WINDOWS
+
   source-stat := stat source --follow-links=dereference
   if not source-stat:
     throw "File/directory $source not found"
+  source-permissions := source-stat[ST-MODE]
   type := source-stat[ST-TYPE]
   target-stat := stat target
   if target-stat and (type != DIRECTORY or not allow-existing-target-directory):
@@ -445,7 +452,7 @@ copy_ -> none
     // dereference the link or not. If we are here, then we do not dereference
     // and should thus copy the link.
     link-target := readlink source
-    if system.platform == system.PLATFORM-WINDOWS:
+    if is-windows:
       // Work around https://github.com/toitlang/toit/issues/2090, where reading
       // an absolute symlink starts with '\??\' which Toit can't deal with if
       // written as value of a link.
@@ -459,12 +466,18 @@ copy_ -> none
   if type == DIRECTORY:
     if not recursive:
       throw "Cannot copy directory '$source' without --recursive"
-    if not target-stat: mkdir target source-stat[ST-MODE]
+    if not target-stat:
+      mkdir target source-permissions
+      if is-windows and source-permissions & SPECIAL-WINDOWS-PERMISSIONS_ != 0:
+        // The Windows file attributes are not taking into account when creating a new directory.
+        // Apply them now.
+        chmod target source-permissions
+
     queue.add [source, target]
     return
 
   in-stream := Stream.for-read source
-  out-stream := Stream.for-write target --permissions=source-stat[ST-MODE]
+  out-stream := Stream.for-write target --permissions=source-permissions
   out-writer := Writer out-stream
   try:
     while data := in-stream.read:
@@ -472,6 +485,10 @@ copy_ -> none
   finally:
     in-stream.close
     out-writer.close
+  if is-windows and (source-permissions & SPECIAL-WINDOWS-PERMISSIONS_) != 0:
+    // The Windows file attributes are not taking into account when creating a new file.
+    // Apply them now.
+    chmod target source-permissions
 
 /**
 Returns the directory part of the given $path.

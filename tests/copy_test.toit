@@ -59,10 +59,12 @@ test-permissions:
   dir-permission/int := ?
   read-only-dir-permission/int := ?
   if platform == PLATFORM-WINDOWS:
-    file-permission0 = file.WINDOWS-FILE-ATTRIBUTE-HIDDEN | file.WINDOWS-FILE-ATTRIBUTE-NORMAL
-    file-permission1 = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-NORMAL
-    dir-permission = 0
-    read-only-dir-permission = file.WINDOWS-FILE-ATTRIBUTE-READONLY
+    // We use the "archive" attribute, since we modify the files, and this is the default
+    // attribute for modified files. The idea is that the backup software clears this bit.
+    file-permission0 = file.WINDOWS-FILE-ATTRIBUTE-HIDDEN | file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE
+    file-permission1 = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE
+    dir-permission = file.WINDOWS-FILE-ATTRIBUTE-DIRECTORY
+    read-only-dir-permission = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-DIRECTORY
   else:
     file-permission0 = 0b111_000_000
     file-permission1 = 0b100_000_000
