@@ -16,8 +16,8 @@ with-tmp-dir [block]:
     directory.rmdir --force --recursive tmp-dir
 
 main:
-  // test-recursive
-  // test-permissions
+  test-recursive
+  test-permissions
   test-symlinks
 
 test-recursive:
@@ -34,16 +34,9 @@ test-recursive:
     file.copy --source=tmp-file --target=file2
     expect-equals content (file.read-content file2)
 
-    // Copy of absolute path to absolute directory path.
-    subdir := "$tmp-dir/subdir"
-    directory.mkdir subdir
-    sub-file := "$subdir/file.txt"
-    file.copy --source=tmp-file --target=subdir
-    expect-equals content (file.read-content sub-file)
-
     // Copy of relative file to relative directory path.
     directory.mkdir "subdir2"
-    file.copy --source="file.txt" --target="subdir2"
+    file.copy --source="file.txt" --target="subdir2/file.txt"
     expect-equals content (file.read-content "subdir2/file.txt")
     expect-equals content (file.read-content "$tmp-dir/subdir2/file.txt")
 
@@ -53,6 +46,12 @@ test-recursive:
     file.copy --source="subdir2" --target="subdir3" --recursive
     expect-equals content (file.read-content "subdir3/file.txt")
     expect-equals other-content (file.read-content "subdir3/nested-subdir/other.txt")
+
+    // Copy recursive to existing directory.
+    directory.mkdir "subdir4"
+    file.copy --source="subdir3" --target="subdir4" --recursive
+    expect-equals content (file.read-content "subdir4/file.txt")
+    expect-equals other-content (file.read-content "subdir4/nested-subdir/other.txt")
 
 test-permissions:
   file-permission0/int := ?

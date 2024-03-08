@@ -356,10 +356,13 @@ chmod name/string permissions/int:
 /**
 Copies $source to $target.
 
-If $target is a directory, then takes the basename of $source and appends it to
-  $target.
+If $source is a file, then $target contains the copy and permissions of $source after
+  the call.
+If $source is a directory and $recursive is true, then $target contains the copy of
+  the content of $source after the call. That is, all files that exist in $source
+  will exist in $target after the call. The $target directory may exist.
 
-The location for $target must exist. That is, when copying to `foo/bar`, `foo`
+The location (dirname) of $target must exist. That is, when copying to `foo/bar`, `foo`
   must exist.
 
 If $dereference is true, then symbolic links are followed.
@@ -370,10 +373,14 @@ If $recursive is true, then directories are copied recursively. If $recursive is
 copy --source/string --target/string --dereference/bool=false --recursive/bool=false -> none:
   // A queue for pending recursive copies.
   queue := Deque
-  if is-directory target:
-    target = "$target/$(basename_ source)"
 
-  copy_ --source=source --target=target --dereference=dereference --recursive=recursive --queue=queue
+  copy_
+      --source=source
+      --target=target
+      --dereference=dereference
+      --recursive=recursive
+      --queue=queue
+      --allow-existing-target-directory
   while not queue.is-empty:
     next := queue.remove-first
     new-source := next[0]
@@ -405,6 +412,7 @@ copy --source/string --target/string --dereference/bool=false --recursive/bool=f
             --dereference=dereference
             --recursive=recursive
             --queue=queue
+            --no-allow-existing-target-directory
     finally:
       directory-stream.close
       if target-permissions != -1:
@@ -417,15 +425,21 @@ Copies $source to $target.
 The given $queue is filled with pending recursive copies. Each entry in the $queue
   is a pair of source, target, where both are directories that exist.
 */
-copy_ --source/string --target/string --dereference/bool --recursive/bool --queue/Deque -> none:
+copy_ -> none
+    --source/string
+    --target/string
+    --dereference/bool
+    --recursive/bool
+    --queue/Deque
+    --allow-existing-target-directory/bool:
   source-stat := stat source --follow-links=dereference
   if not source-stat:
     throw "File/directory $source not found"
+  type := source-stat[ST-TYPE]
   target-stat := stat target
-  if target-stat:
+  if target-stat and (type != DIRECTORY or not allow-existing-target-directory):
     throw "'$target' already exists"
 
-  type := source-stat[ST-TYPE]
   if type == SYMBOLIC-LINK or type == DIRECTORY-SYMBOLIC-LINK:
     // When taking the stat of the source we already declared whether we
     // dereference the link or not. If we are here, then we do not dereference
@@ -445,7 +459,7 @@ copy_ --source/string --target/string --dereference/bool --recursive/bool --queu
   if type == DIRECTORY:
     if not recursive:
       throw "Cannot copy directory '$source' without --recursive"
-    mkdir target source-stat[ST-MODE]
+    if not target-stat: mkdir target source-stat[ST-MODE]
     queue.add [source, target]
     return
 
