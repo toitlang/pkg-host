@@ -118,6 +118,7 @@ main args:
 
     try:
       p := pipe.to "sh" "-c" "tr A-Z a-z > $dirname/$filename"
+      p.write #[]  // Make sure we can deal with empty writes.
       p.write "The contents of the file"
       p.close
 
