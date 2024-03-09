@@ -469,7 +469,7 @@ copy_ -> none
     if not target-stat:
       mkdir target source-permissions
       if is-windows and source-permissions & SPECIAL-WINDOWS-PERMISSIONS_ != 0:
-        // The Windows file attributes are not taking into account when creating a new directory.
+        // The Windows file attributes are not taken into account when creating a new directory.
         // Apply them now.
         chmod target source-permissions
 
@@ -486,7 +486,7 @@ copy_ -> none
     in-stream.close
     out-writer.close
   if is-windows and (source-permissions & SPECIAL-WINDOWS-PERMISSIONS_) != 0:
-    // The Windows file attributes are not taking into account when creating a new file.
+    // The Windows file attributes are not taken into account when creating a new file.
     // Apply them now.
     chmod target source-permissions
 
