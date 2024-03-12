@@ -2,8 +2,9 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-import reader show Reader
+import reader as old-reader
 import writer show Writer
+import io
 
 import system
 import .directory
@@ -67,7 +68,7 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream implements Reader:
+class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Reader:
   fd_ := ?
 
   constructor.internal_ .fd_:
@@ -127,15 +128,25 @@ class Stream implements Reader:
   /**
   Reads some data from the file, returning a byte array.
   Returns null on end-of-file.
+
+  Deprecated. Use 'read' on $in instead.
   */
   read -> ByteArray?:
+    return in.read
+
+  consume_ -> ByteArray?:
     return read_ fd_
 
   /**
   Writes part of the string or ByteArray to the open file descriptor.
   Returns the number of bytes written.
+
+  Deprecated. Use 'write' or 'try-write' on $out instead.
   */
   write data from/int=0 to/int=data.size -> int:
+    return try-write_ data from to
+
+  try-write_ data/io.Data from to -> int:
     return write_ fd_ data from to
 
   close -> none:
@@ -160,10 +171,10 @@ On small devices with a flash filesystem, simply gets a view
 */
 read-content file-name/string -> ByteArray:
   length := size file-name
-  if length == 0: return ByteArray 0
+  if length == 0: return #[]
   file := Stream.for-read file-name
   try:
-    byte-array := file.read
+    byte-array := file.in.read
     if not byte-array: throw "CHANGED_SIZE"
     if byte-array.size == length: return byte-array
     proxy := create-off-heap-byte-array length
@@ -171,7 +182,7 @@ read-content file-name/string -> ByteArray:
       proxy.replace pos byte-array 0 byte-array.size
       pos += byte-array.size
       if pos == length: return proxy
-      byte-array = file.read
+      byte-array = file.in.read
       if not byte-array: throw "CHANGED_SIZE"
     return proxy
   finally:
@@ -185,13 +196,12 @@ If $permissions is provided uses it to set the permissions of the file.
 The $permissions are only used if the file is created, and not if it is
   overwritten.
 */
-write-content content --path/string --permissions/int?=null -> none:
+write-content content/io.Data --path/string --permissions/int?=null -> none:
   stream := Stream.for-write path --permissions=permissions
-  writer := Writer stream
   try:
-    writer.write content
+    stream.out.write content
   finally:
-    writer.close
+    stream.close
 
 /// Returns whether a path exists and is a regular file.
 is-file name --follow-links/bool=true -> bool:
@@ -245,9 +255,15 @@ is-open-file_ fd:
 read_ descriptor:
   #primitive.file.read
 
-// Writes part of the string or ByteArray to the open file descriptor.
+// Writes part of the io.Data to the open file descriptor.
 write_ descriptor data from to:
-  #primitive.file.write
+  return #primitive.file.write: | error |
+    written := 0
+    io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
+      chunk-written := write_ descriptor chunk 0 chunk.size
+      written += chunk-written
+      if chunk-written < chunk.size: return written
+    return written
 
 // Close open file
 close_ descriptor:
