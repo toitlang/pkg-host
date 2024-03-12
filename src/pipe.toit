@@ -2,7 +2,6 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-import bytes
 import .file as file
 import io
 import monitor
@@ -245,7 +244,7 @@ windows-escape_ path/string -> string:
   // The path contains spaces or quotes, so we have to escape.
   // Make the buffer a little larger than the path in the hope that we don't
   // have to grow it while building.
-  accumulator := bytes.Buffer.with-initial-size (path.size + 4 + (path.size >> 2))
+  accumulator := io.Buffer.with-capacity (path.size + 4 + (path.size >> 2))
   accumulator.write-byte '"'  // Initial double quote.
   backslashes := 0
   path.size.repeat:
