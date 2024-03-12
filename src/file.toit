@@ -6,8 +6,11 @@ import reader as old-reader
 import writer show Writer
 import io
 
-// Manipulation of files on a filesystem.  Currently not available on embedded
-// targets.  Names work best when imported without "show *".
+import system
+import .directory
+
+// Manipulation of files on a filesystem.
+// Names work best when imported without "show *".
 
 // Flags for file.Stream second constructor argument.  Analogous to the
 // second argument to the open() system call.
@@ -19,42 +22,47 @@ CREAT ::= 8
 TRUNC ::= 0x10
 
 /// Index of the device number in the array returned by $stat.
-ST_DEV ::= 0
+ST-DEV ::= 0
 /// Index of the inode number in the array returned by $stat.
-ST_INO ::= 1
+ST-INO ::= 1
 /// Index of the permissions bits in the array returned by $stat.
-ST_MODE ::= 2
+ST-MODE ::= 2
 /// Index of the file type number in the array returned by $stat.
-ST_TYPE ::= 3
+ST-TYPE ::= 3
 /// Index of the link count in the array returned by $stat.
-ST_NLINK ::= 4
+ST-NLINK ::= 4
 /// Index of the owning user id in the array returned by $stat.
-ST_UID ::= 5
+ST-UID ::= 5
 /// Index of the owning group id in the array returned by $stat.
-ST_GID ::= 6
+ST-GID ::= 6
 /// Index of the file size in the array returned by $stat.
-ST_SIZE ::= 7
+ST-SIZE ::= 7
 /// Index of the last access time in the array returned by $stat.
-ST_ATIME ::= 8
+ST-ATIME ::= 8
 /// Index of the last modification time in the array returned by $stat.
-ST_MTIME ::= 9
+ST-MTIME ::= 9
 /// Index of the creation time in the array returned by $stat.
-ST_CTIME ::= 10
+ST-CTIME ::= 10
 
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named FIFO.
 FIFO ::= 0
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a character device.
-CHARACTER_DEVICE ::= 1
+CHARACTER-DEVICE ::= 1
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a directory.
 DIRECTORY ::= 2
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a block device.
-BLOCK_DEVICE ::= 3
+BLOCK-DEVICE ::= 3
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a regular file.
-REGULAR_FILE ::= 4
+REGULAR-FILE ::= 4
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a symbolic link.
-SYMBOLIC_LINK ::= 5
+SYMBOLIC-LINK ::= 5
 /// The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a named socket.
 SOCKET ::= 6
+/**
+The number for the ST_TYPE field of file.stat that indicates a filesystem entry that is a
+  symlink to a directory. (Windows only).
+*/
+DIRECTORY-SYMBOLIC-LINK ::= 7
 
 /**
 An open file with a current position.  Corresponds in many ways to a file
@@ -68,7 +76,7 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
   /**
   Opens the file at $path for reading.
   */
-  constructor.for_read path/string:
+  constructor.for-read path/string:
     return Stream path RDONLY 0
 
   /**
@@ -80,7 +88,7 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
 
   Ignored if the file already exists.
   */
-  constructor.for_write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
+  constructor.for-write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
     return Stream path (WRONLY | TRUNC | CREAT) permissions
 
   /**
@@ -144,13 +152,13 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
   close -> none:
     close_ fd_
 
-  is_a_terminal -> bool:
+  is-a-terminal -> bool:
     return false
 
 
-/// Deprecated. Use $read_content instead.
-read_contents name:
-  return read_content name
+/// Deprecated. Use $read-content instead.
+read-contents name:
+  return read-content name
 
 /**
 Reads the content of a file.
@@ -161,21 +169,21 @@ The content is stored in an off-heap ByteArray.
 On small devices with a flash filesystem, simply gets a view
   of the underlying bytes. (Not implemented yet)
 */
-read_content file_name/string -> ByteArray:
-  length := size file_name
+read-content file-name/string -> ByteArray:
+  length := size file-name
   if length == 0: return #[]
-  file := Stream.for_read file_name
+  file := Stream.for-read file-name
   try:
-    byte_array := file.in.read
-    if not byte_array: throw "CHANGED_SIZE"
-    if byte_array.size == length: return byte_array
-    proxy := create_off_heap_byte_array length
+    byte-array := file.in.read
+    if not byte-array: throw "CHANGED_SIZE"
+    if byte-array.size == length: return byte-array
+    proxy := create-off-heap-byte-array length
     for pos := 0; pos < length; null:
-      proxy.replace pos byte_array 0 byte_array.size
-      pos += byte_array.size
+      proxy.replace pos byte-array 0 byte-array.size
+      pos += byte-array.size
       if pos == length: return proxy
-      byte_array = file.in.read
-      if not byte_array: throw "CHANGED_SIZE"
+      byte-array = file.in.read
+      if not byte-array: throw "CHANGED_SIZE"
     return proxy
   finally:
     file.close
@@ -188,24 +196,24 @@ If $permissions is provided uses it to set the permissions of the file.
 The $permissions are only used if the file is created, and not if it is
   overwritten.
 */
-write_content content/io.Data --path/string --permissions/int?=null -> none:
-  stream := Stream.for_write path --permissions=permissions
+write-content content/io.Data --path/string --permissions/int?=null -> none:
+  stream := Stream.for-write path --permissions=permissions
   try:
     stream.out.write content
   finally:
     stream.close
 
 /// Returns whether a path exists and is a regular file.
-is_file name --follow_links/bool=true -> bool:
-  stat := stat_ name follow_links
+is-file name --follow-links/bool=true -> bool:
+  stat := stat_ name follow-links
   if not stat: return false
-  return stat[ST_TYPE] == REGULAR_FILE
+  return stat[ST-TYPE] == REGULAR-FILE
 
 /// Returns whether a path exists and is a directory.
-is_directory name --follow_links/bool=true -> bool:
-  stat := stat_ name follow_links
+is-directory name --follow-links/bool=true -> bool:
+  stat := stat_ name follow-links
   if not stat: return false
-  return stat[ST_TYPE] == DIRECTORY
+  return stat[ST-TYPE] == DIRECTORY
 
 /**
 Returns the file size in bytes or null for no such file.
@@ -214,8 +222,8 @@ Throws an error if the name exists but is not a regular file.
 size name:
   stat := stat_ name true
   if not stat: return null
-  if stat[ST_TYPE] != REGULAR_FILE: throw "INVALID_ARGUMENT"
-  return stat[ST_SIZE]
+  if stat[ST-TYPE] != REGULAR-FILE: throw "INVALID_ARGUMENT"
+  return stat[ST-SIZE]
 
 // Returns a file descriptor.  Only for use on actual files, not pipes,
 // devices, etc.
@@ -224,23 +232,23 @@ open_ name flags permissions:
 
 /**
 Returns an array describing the given named entry in the filesystem, see the
-  index names $ST_DEV, etc.
+  index names $ST-DEV, etc.
 */
-stat name/string --follow_links/bool=true -> List?:
-  result := stat_ name follow_links
+stat name/string --follow-links/bool=true -> List?:
+  result := stat_ name follow-links
   if not result: return null
-  result[ST_ATIME] = Time.epoch --ns=result[ST_ATIME]
-  result[ST_MTIME] = Time.epoch --ns=result[ST_MTIME]
-  result[ST_CTIME] = Time.epoch --ns=result[ST_CTIME]
+  result[ST-ATIME] = Time.epoch --ns=result[ST-ATIME]
+  result[ST-MTIME] = Time.epoch --ns=result[ST-MTIME]
+  result[ST-CTIME] = Time.epoch --ns=result[ST-CTIME]
   return result
 
-stat_ name/string follow_links/bool -> List?:
+stat_ name/string follow-links/bool -> List?:
   #primitive.file.stat
 
 // Takes an open file descriptor and determines if it represents a file
 // as opposed to a socket or a pipe.
-is_open_file_ fd:
-  #primitive.file.is_open_file
+is-open-file_ fd:
+  #primitive.file.is-open-file
 
 // Reads some data from the file, returning a byte array.  Returns null on
 // end-of-file.
@@ -267,9 +275,251 @@ Deletes a file, given its name.
 delete name/string -> none:
   #primitive.file.unlink
 
-/*
+/**
 Renames a file or directory.
 Only works if the $to name is on the same filesystem.
 */
 rename from/string to/string -> none:
   #primitive.file.rename
+
+/**
+Creates a hard link from $source to a $target file.
+*/
+link --hard/bool --source/string --target/string -> none:
+  if not hard: throw "INVALID_ARGUMENT"
+  link_ source target LINK-TYPE-HARD_
+
+/**
+Creates a soft link from $source to a $target file.
+*/
+link --file/bool --source/string --target/string -> none:
+  if not file: throw "INVALID_ARGUMENT"
+  if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
+  link_ source target LINK-TYPE-SYMBOLIC_
+
+/**
+Creates a soft link from $source to a $target directory.
+*/
+link --directory/bool --source/string --target/string -> none:
+  if not directory: throw "INVALID_ARGUMENT"
+  if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
+    link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
+  else:
+    link_ source target LINK-TYPE-SYMBOLIC_
+
+/**
+Creates a symbolic link from $source to $target. This version of link requires
+  that the $target exists.
+It will automatically choose the correct type of link (file or directory) based
+  on the type of $target.
+*/
+link --source/string --target/string -> none:
+  rooted-path := target
+  if not is-rooted_ rooted-path:
+    // We need to make the path relative to the source.
+    rooted-path = "$(dirname_ source)/$target"
+  if not stat rooted-path: throw "TARGET_NOT_FOUND"
+
+  if system.platform == system.PLATFORM-WINDOWS:
+    // Work around https://github.com/toitlang/toit/issues/2090, where symbolic links with "/" don't work.
+    // This still won't allow us to read symbolic links with '/' if they were created by other programs,
+    // but at least we will be able to read the ones we create.
+    target = target.replace --all "/" "\\"
+
+  if is-directory rooted-path and system.platform == system.PLATFORM-WINDOWS:
+    link_ source target LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
+  else:
+    link_ source target LINK-TYPE-SYMBOLIC_
+
+LINK-TYPE-HARD_                       ::= 0
+LINK-TYPE-SYMBOLIC_                   ::= 1
+LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_ ::= 2
+
+link_ source/string target/string type/int -> none:
+  #primitive.file.link
+
+/**
+Reads the destination of the link $name
+*/
+readlink name/string -> string:
+  #primitive.file.readlink
+
+/** Windows specific attribute for read-only files */
+WINDOWS-FILE-ATTRIBUTE-READONLY ::= 0x01
+/** Windows specific attribute for hidden files */
+WINDOWS-FILE-ATTRIBUTE-HIDDEN   ::= 0x02
+/** Windows specific attribute for system files */
+WINDOWS-FILE-ATTRIBUTE-SYSTEM   ::= 0x04
+/** Windows specific attribute for normal files */
+WINDOWS-FILE-ATTRIBUTE-NORMAL   ::= 0x80
+/** Windows specific attribute for archive files */
+WINDOWS-FILE-ATTRIBUTE-ARCHIVE  ::= 0x20
+
+/**
+Changes filesystem permissions for the file $name to $permissions.
+*/
+chmod name/string permissions/int:
+  #primitive.file.chmod
+
+/**
+Copies $source to $target.
+
+If $target is a directory, then takes the basename of $source and appends it to
+  $target.
+
+The location for $target must exist. That is, when copying to `foo/bar`, `foo`
+  must exist.
+
+If $dereference is true, then symbolic links are followed.
+
+If $recursive is true, then directories are copied recursively. If $recursive is
+  false, then $source must be a file.
+*/
+copy --source/string --target/string --dereference/bool=false --recursive/bool=false -> none:
+  // A queue for pending recursive copies.
+  queue := Deque
+  if is-directory target:
+    target = "$target/$(basename_ source)"
+
+  copy_ --source=source --target=target --dereference=dereference --recursive=recursive --queue=queue
+  while not queue.is-empty:
+    next := queue.remove-first
+    new-source := next[0]
+    new-target := next[1]
+    target-stat := stat new-target
+    if not target-stat:
+      throw "Target directory '$new-target' does not exist"
+    target-permissions := target-stat[ST-MODE]
+    is-windows := system.platform == system.PLATFORM-WINDOWS
+    // If the The directory was marked as read-only.
+    // Temporarily change the permissions to be able to copy the directory.
+    OWNER-WRITE ::= 0b010_000_000
+    if not is-windows and target-permissions & OWNER-WRITE != OWNER-WRITE:
+      chmod new-target (target-permissions | OWNER-WRITE)
+    else if is-windows and target-permissions & WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+      // The directory was marked as read-only.
+      // Temporarily change the permissions to be able to copy the directory.
+      chmod new-target (target-permissions & ~WINDOWS-FILE-ATTRIBUTE-READONLY)
+    else:
+      // Mark as not needing any chmod.
+      target-permissions = -1
+
+    directory-stream := DirectoryStream new-source
+    try:
+      while entry := directory-stream.next:
+        copy_
+            --source="$new-source/$entry"
+            --target="$new-target/$entry"
+            --dereference=dereference
+            --recursive=recursive
+            --queue=queue
+    finally:
+      directory-stream.close
+      if target-permissions != -1:
+        // Make the directory read-only again.
+        chmod new-target target-permissions
+
+/**
+Copies $source to $target.
+
+The given $queue is filled with pending recursive copies. Each entry in the $queue
+  is a pair of source, target, where both are directories that exist.
+*/
+copy_ --source/string --target/string --dereference/bool --recursive/bool --queue/Deque -> none:
+  source-stat := stat source --follow-links=dereference
+  if not source-stat:
+    throw "File/directory $source not found"
+  target-stat := stat target
+  if target-stat:
+    throw "'$target' already exists"
+
+  type := source-stat[ST-TYPE]
+  if type == SYMBOLIC-LINK or type == DIRECTORY-SYMBOLIC-LINK:
+    // When taking the stat of the source we already declared whether we
+    // dereference the link or not. If we are here, then we do not dereference
+    // and should thus copy the link.
+    link-target := readlink source
+    if system.platform == system.PLATFORM-WINDOWS:
+      // Work around https://github.com/toitlang/toit/issues/2090, where reading
+      // an absolute symlink starts with '\??\' which Toit can't deal with if
+      // written as value of a link.
+      if link-target.starts-with "\\??\\": link-target = link-target[4..]
+    link-type := type == DIRECTORY-SYMBOLIC-LINK
+        ? LINK-TYPE-SYMBOLIC-WINDOWS-DIRECTORY_
+        : LINK-TYPE-SYMBOLIC_
+    link_ target link-target link-type
+    return
+
+  if type == DIRECTORY:
+    if not recursive:
+      throw "Cannot copy directory '$source' without --recursive"
+    mkdir target source-stat[ST-MODE]
+    queue.add [source, target]
+    return
+
+  in-stream := Stream.for-read source
+  out-stream := Stream.for-write target --permissions=source-stat[ST-MODE]
+  out-writer := Writer out-stream
+  try:
+    while data := in-stream.read:
+      out-writer.write data
+  finally:
+    in-stream.close
+    out-writer.close
+
+/**
+Returns the directory part of the given $path.
+This is a simplified version of `dirname`, as it doesn't take into
+  account complicated roots (specifically on Windows).
+
+A complete version is in the 'fs' package.
+*/
+dirname_ path/string -> string:
+  if path == "/": return "/"
+  if path == "": return "."
+  if path[path.size - 1] == '/': path = path[0..path.size - 2]
+  last-separator := path.index-of --last "/"
+  if system.platform == system.PLATFORM-WINDOWS:
+    last-separator = max (path.index-of --last "\\") last-separator
+  if last-separator == -1: return "."
+  return path[0..last-separator]
+
+/**
+Returns the base name of the given $path.
+This is a simplified version of `basename`, as it doesn't take into
+  account complicated roots (specifically on Windows).
+
+A complete version is in the 'fs' package.
+*/
+basename_ path/string -> string:
+  if path == "/": return "/"
+  if path == "": return "."
+  if path[path.size - 1] == '/': path = path[0..path.size - 2]
+  last-separator := path.index-of --last "/"
+  if system.platform == system.PLATFORM-WINDOWS:
+    last-separator = max (path.index-of --last "\\") last-separator
+  if last-separator == -1: return path
+  return path[last-separator + 1..]
+
+is-volume-letter_ letter/int -> bool:
+  return 'a' <= letter <= 'z' or 'A' <= letter <= 'Z'
+
+/**
+Returns whether the given $path is rooted.
+On Linux and macOS, this means that the path is absolute.
+On Windows this means that the path is absolute or starts with a volume letter,
+  even if it isn't absolute (like `C:foo`).
+*/
+is-rooted_ path/string -> bool:
+  if system.platform == system.PLATFORM-WINDOWS:
+    if path.starts-with "\\" or path.starts-with "/": return true
+    return path.size >= 2 and is-volume-letter_ path[0] and path[1] == ':'
+  return path.starts-with "/"

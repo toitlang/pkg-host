@@ -9,66 +9,62 @@ import host.file
 import semver
 
 main args:
-  if (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
-    print "This test requires a newer version of the SDK."
-    exit 0
-
   if args.size < 1:
     print "Usage: block_std_test.toit <toit_exe>"
     exit 1
 
-  if not file.is_file "tests/block_stdout_child.toit":
+  if not file.is-file "tests/block_stdout_child.toit":
     print "Cannot find toit file 'block_stdout_child.toit' in tests directory"
     exit 1
 
-  if not file.is_file "tests/block_stdin_child.toit":
+  if not file.is-file "tests/block_stdin_child.toit":
     print "Cannot find toit file 'block_stdin_child.toit' in tests directory"
     exit 1
 
-  toit_exe := args[0]
+  toit-exe := args[0]
 
   // Try to run the toit executable.
-  exception := catch: pipe.backticks toit_exe "--version"
+  exception := catch: pipe.backticks toit-exe "--version"
   if exception:
-    print "Running the given toit executable '$toit_exe' failed: $exception"
+    print "Running the given toit executable '$toit-exe' failed: $exception"
     exit 1
 
   ["close", "write"].do: | action |
     subprocess := pipe.fork
       true  // use_path
-      pipe.PIPE_INHERITED // stdin
-      pipe.PIPE_CREATED   // stdout
-      pipe.PIPE_CREATED   // stderr
-      toit_exe
-      [toit_exe, "tests/block_stdout_child.toit", action]
+      pipe.PIPE-INHERITED // stdin
+      pipe.PIPE-CREATED   // stdout
+      pipe.PIPE-CREATED   // stderr
+      toit-exe
+      [toit-exe, "tests/block_stdout_child.toit", action]
 
-    subprocess_stdout := subprocess[1]
-    subprocess_stderr := subprocess[2]
+    subprocess-stdout := subprocess[1]
+    subprocess-stderr := subprocess[2]
     pid := subprocess[3]
 
     // Get the stderr first even though the subproces is blocking on stdout.
     print "Waiting for read of child stderr."
-    line := subprocess_stderr.read
+    line := subprocess-stderr.read
     // If this gets the wrong message then the buffer on stdout is too big and
     // we need to increase the size of the loop in block_stdout_child.toit.
     if action == "close":
-      if line != null: print "<$line.to_string>"
-      expect_equals null line
+      if line != null: print "<$line.to-string>"
+      expect-equals null line
       print "Close woke up the task."
     else:
-      expect_equals "Message through stderr." line.to_string
-      print "$line.to_string"
+      expect-equals "Message through stderr." line.to-string
+      print "$line.to-string"
     task::
-      while read := subprocess_stdout.read:
+      while read := subprocess-stdout.read:
         null
     if action != "close":
-      line = subprocess_stderr.read
-      expect_equals "Done with stdout." line.to_string
-      print "$line.to_string"
+      line = subprocess-stderr.read
+      expect-equals "Done with stdout." line.to-string
+      print "$line.to-string"
 
-    exit_value := pipe.wait_for pid
-    expect_equals 0
-      pipe.exit_code exit_value
-    expect_equals null
-      pipe.exit_signal exit_value
+    exit-value := pipe.wait-for pid
+    expect-equals 0
+      pipe.exit-code exit-value
+    expect-equals null
+      pipe.exit-signal exit-value
     print "OK exit"

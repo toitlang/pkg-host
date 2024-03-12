@@ -7,58 +7,56 @@ import expect show *
 import host.file
 import host.directory show *
 import writer show Writer
+import system show platform PLATFORM-WINDOWS
 
 expect_ name [code]:
   expect
-    (catch code).starts_with name
+    (catch code).starts-with name
 
-expect_out_of_bounds [code]:
+expect-out-of-bounds [code]:
   expect_ "OUT_OF_BOUNDS" code
 
-expect_file_not_found [code]:
+expect-file-not-found [code]:
   expect_ "FILE_NOT_FOUND" code
 
-expect_invalid_argument [code]:
+expect-invalid-argument [code]:
   expect_ "INVALID_ARGUMENT" code
 
-expect_already_closed [code]:
+expect-already-closed [code]:
   expect_ "ALREADY_CLOSED" code
 
 main:
-  // This test does not work on ESP32 since there is no file system!
-  if platform == "FreeRTOS": return
+  expect-file-not-found: file.Stream.for-read "mkfxz.not_there"
+  expect-file-not-found: file.Stream "mkfxz.not_there" file.RDONLY
+  expect-invalid-argument: file.Stream "any name" file.CREAT       // Can't create a file without permissions.
 
-  expect_file_not_found: file.Stream.for_read "mkfxz.not_there"
-  expect_file_not_found: file.Stream "mkfxz.not_there" file.RDONLY
-  expect_invalid_argument: file.Stream "any name" file.CREAT       // Can't create a file without permissions.
+  nul-device := (platform == PLATFORM-WINDOWS ? "\\\\.\\NUL" : "/dev/null")
+  open-file := file.Stream.for-read nul-device
+  byte-array := open-file.read
+  expect (not byte-array)
+  open-file.close
+  expect-already-closed: open-file.close
 
-  nul_device := (platform == PLATFORM_WINDOWS ? "\\\\.\\NUL" : "/dev/null")
-  open_file := file.Stream.for_read nul_device
-  byte_array := open_file.read
-  expect (not byte_array)
-  open_file.close
-  expect_already_closed: open_file.close
+  open-file = file.Stream nul-device file.RDONLY
+  byte-array = open-file.read
+  expect (not byte-array)
+  open-file.close
+  expect-already-closed: open-file.close
 
-  open_file = file.Stream nul_device file.RDONLY
-  byte_array = open_file.read
-  expect (not byte_array)
-  open_file.close
-  expect_already_closed: open_file.close
-
-  test_contents := "This is the contents of the tæst file"
+  test-contents := "This is the contents of the tæst file"
 
   tmpdir := mkdtemp "/tmp/toit_file_test_"
 
   try:
 
-    test_recursive tmpdir
-    test_cwd tmpdir
-    test_realpath tmpdir
+    test-recursive tmpdir
+    test-cwd tmpdir
+    test-realpath tmpdir
 
     chdir tmpdir
 
-    test_recursive ""
-    test_recursive "."
+    test-recursive ""
+    test-recursive "."
 
     filename := "test.out"
     dirname := "testdir"
@@ -66,48 +64,48 @@ main:
     mkdir dirname
 
     try:
-      test_out := file.Stream.for_write filename
+      test-out := file.Stream.for-write filename
 
       try:
-        test_out.write test_contents
-        test_out.close
+        test-out.write test-contents
+        test-out.close
 
         10000.repeat:
-          file.read_content filename
+          file.read-content filename
 
-        read_back := (file.read_content filename).to_string
+        read-back := (file.read-content filename).to-string
 
-        expect_equals test_contents read_back
+        expect-equals test-contents read-back
 
-        expect_equals test_contents.size (file.size filename)
+        expect-equals test-contents.size (file.size filename)
 
       finally:
         file.delete filename
 
-      test_out = file.Stream.for_write filename
+      test-out = file.Stream.for-write filename
       try:
-        test_out.close
-        expect_equals
+        test-out.close
+        expect-equals
           ByteArray 0
-          file.read_content filename
+          file.read-content filename
       finally:
         file.delete filename
 
       expect (not file.size filename)
 
-      test_out = file.Stream.for_write filename
+      test-out = file.Stream.for-write filename
 
       try:
         from := 5
         to := 7
-        test_out.write test_contents from to
-        test_out.close
+        test-out.write test-contents from to
+        test-out.close
 
-        read_back := (file.read_content filename).to_string
+        read-back := (file.read-content filename).to-string
 
-        expect_equals (test_contents.copy from to) read_back
+        expect-equals (test-contents.copy from to) read-back
 
-        expect_equals (to - from) (file.size filename)
+        expect-equals (to - from) (file.size filename)
 
       finally:
         file.delete filename
@@ -115,49 +113,49 @@ main:
       expect (not file.size filename)
 
       try:
-        file.write_content test_contents --path=filename
-        read_back := (file.read_content filename).to_string
-        expect_equals test_contents read_back
+        file.write-content test-contents --path=filename
+        read-back := (file.read-content filename).to-string
+        expect-equals test-contents read-back
       finally:
         file.delete filename
 
       expect (not file.size filename)
 
       // Permissions does not quite work on windows
-      if platform != PLATFORM_WINDOWS:
+      if platform != PLATFORM-WINDOWS:
         try:
-          file.write_content test_contents --path=filename --permissions=(6 << 6)
-          read_back := (file.read_content filename).to_string
-          expect_equals test_contents read_back
+          file.write-content test-contents --path=filename --permissions=(6 << 6)
+          read-back := (file.read-content filename).to-string
+          expect-equals test-contents read-back
           stats := file.stat filename
           // We can't require that the permissions are exactly the same (as the umask
           // might clear some bits).
-          expect_equals (6 << 6) ((6 << 6) | stats[file.ST_MODE])
+          expect-equals (6 << 6) ((6 << 6) | stats[file.ST-MODE])
         finally:
           file.delete filename
 
       expect (not file.size filename)
 
-      cwd_path := cwd
+      cwd-path := cwd
 
-      path_sep := platform == PLATFORM_WINDOWS ? "\\" : "/"
+      path-sep := platform == PLATFORM-WINDOWS ? "\\" : "/"
 
       chdir dirname
-      expect_equals "$cwd_path$path_sep$dirname" cwd
+      expect-equals "$cwd-path$path-sep$dirname" cwd
 
-      expect_equals "$cwd_path$path_sep$dirname" (realpath ".")
-      expect_equals "$cwd_path" (realpath "..")
-      expect_equals "$cwd_path$path_sep$dirname" (realpath "../$dirname")
-      expect_equals "$cwd_path" (realpath "../$dirname/..")
-      expect_equals null (realpath "fætter");
+      expect-equals "$cwd-path$path-sep$dirname" (realpath ".")
+      expect-equals "$cwd-path" (realpath "..")
+      expect-equals "$cwd-path$path-sep$dirname" (realpath "../$dirname")
+      expect-equals "$cwd-path" (realpath "../$dirname/..")
+      expect-equals null (realpath "fætter");
 
-      test_out = file.Stream filename file.CREAT | file.WRONLY 0x1ff
-      test_out.write test_contents
-      test_out.close
+      test-out = file.Stream filename file.CREAT | file.WRONLY 0x1ff
+      test-out.write test-contents
+      test-out.close
 
-      expect_equals test_contents.size (file.size filename)
+      expect-equals test-contents.size (file.size filename)
       chdir ".."
-      expect_equals test_contents.size (file.size "$dirname/$filename")
+      expect-equals test-contents.size (file.size "$dirname/$filename")
 
       dir := DirectoryStream dirname
       name := dir.next
@@ -174,45 +172,45 @@ main:
   finally:
     rmdir tmpdir
 
-test_recursive test_dir:
+test-recursive test-dir:
   // We want to test creation of paths if they are relative.
-  rec_dir := test_dir == "" ? "rec" : "$test_dir/rec"
+  rec-dir := test-dir == "" ? "rec" : "$test-dir/rec"
 
-  deep_dir := "$rec_dir/a/b/c/d"
-  mkdir --recursive deep_dir
-  expect (file.is_directory deep_dir)
+  deep-dir := "$rec-dir/a/b/c/d"
+  mkdir --recursive deep-dir
+  expect (file.is-directory deep-dir)
 
   paths := [
-    "$rec_dir/foo",
-    "$rec_dir/a/bar",
-    "$rec_dir/a/b/gee",
-    "$rec_dir/a/b/c/toto",
-    "$rec_dir/a/b/c/d/titi",
+    "$rec-dir/foo",
+    "$rec-dir/a/bar",
+    "$rec-dir/a/b/gee",
+    "$rec-dir/a/b/c/toto",
+    "$rec-dir/a/b/c/d/titi",
   ]
   paths.do:
-    stream := file.Stream.for_write it
+    stream := file.Stream.for-write it
     writer := (Writer stream)
     stream.write it
     stream.close
 
   paths.do:
-    expect (file.is_file it)
+    expect (file.is-file it)
 
-  rmdir --recursive rec_dir
-  expect (not file.stat rec_dir)
+  rmdir --recursive rec-dir
+  expect (not file.stat rec-dir)
 
-test_cwd test_dir:
-  current_dir := cwd
-  chdir test_dir
-  expect_equals (realpath test_dir) (realpath cwd)
-  chdir current_dir
+test-cwd test-dir:
+  current-dir := cwd
+  chdir test-dir
+  expect-equals (realpath test-dir) (realpath cwd)
+  chdir current-dir
 
-test_realpath test_dir:
-  current_dir := cwd
+test-realpath test-dir:
+  current-dir := cwd
   // Use "realpath" when changing into the test-directory.
   // The directory might be a symlink.
-  real_tmp := realpath test_dir
-  chdir real_tmp
-  expect_equals real_tmp (realpath ".")
-  expect_equals real_tmp (realpath test_dir)
-  chdir current_dir
+  real-tmp := realpath test-dir
+  chdir real-tmp
+  expect-equals real-tmp (realpath ".")
+  expect-equals real-tmp (realpath test-dir)
+  chdir current-dir

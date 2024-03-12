@@ -8,50 +8,51 @@ import host.file
 import host.directory
 import host.pipe
 import host.os
+import system show platform PLATFORM-WINDOWS
 
-tool_path_ tool/string -> string:
-  if platform != PLATFORM_WINDOWS: return tool
+tool-path_ tool/string -> string:
+  if platform != PLATFORM-WINDOWS: return tool
   // On Windows, we use the <tool>.exe that comes with Git for Windows.
 
   // TODO(florian): depending on environment variables is brittle.
   // We should use `SearchPath` (to find `git.exe` in the PATH), or
   // 'SHGetSpecialFolderPath' (to find the default 'Program Files' folder).
-  program_files_path := os.env.get "ProgramFiles"
-  if not program_files_path:
+  program-files-path := os.env.get "ProgramFiles"
+  if not program-files-path:
     // This is brittle, as Windows localizes the name of the folder.
-    program_files_path = "C:/Program Files"
-  result := "$program_files_path/Git/usr/bin/$(tool).exe"
-  if not file.is_file result:
+    program-files-path = "C:/Program Files"
+  result := "$program-files-path/Git/usr/bin/$(tool).exe"
+  if not file.is-file result:
     throw "Could not find $result. Please install Git for Windows"
   return result
 
 /**
 Extracts the contents of a tar file at $path to the given $to directory.
 */
-extract_tar --to/string path/string:
-    tar := tool_path_ "tar"
+extract-tar --to/string path/string:
+    tar := tool-path_ "tar"
 
-    extra_args := []
-    if platform == PLATFORM_WINDOWS:
+    extra-args := []
+    if platform == PLATFORM-WINDOWS:
       // Tar can't handle backslashes as separators.
       path = path.replace --all "\\" "/"
       to = to.replace --all "\\" "/"
-      extra_args = ["--force-local"]
+      extra-args = ["--force-local"]
 
-    pipe.run_program [tar, "x", "-f", path, "-C", to] + extra_args
+    pipe.run-program [tar, "x", "-f", path, "-C", to] + extra-args
 
-with_tmp_directory [block]:
+with-tmp-directory [block]:
   tmpdir := directory.mkdtemp "/tmp/host-test-"
   try:
     block.call tmpdir
   finally:
     directory.rmdir --recursive tmpdir
 
-SYMLINK_TAR_FILE ::= "tests/symlink_test.tar"
+SYMLINK-TAR-FILE ::= "tests/symlink_test.tar"
 
 main:
-  with_tmp_directory: | tmp_dir |
-    extract_tar SYMLINK_TAR_FILE --to=tmp_dir
+  with-tmp-directory: | tmp-dir |
+    extract-tar SYMLINK-TAR-FILE --to=tmp-dir
 
     /*
     Check that the tar is what we expect it to be:
@@ -64,16 +65,16 @@ main:
         total 0
         -rw-r--r-- 1 flo flo 0 Aug  8 17:06 foo.txt
     */
-    expect (file.is_directory "$tmp_dir/symlink_test/a")
-    expect (file.is_directory "$tmp_dir/symlink_test/b")
-    expect (file.is_directory "$tmp_dir/symlink_test/a/sym_b" --follow_links)
-    if platform != PLATFORM_WINDOWS:
+    expect (file.is-directory "$tmp-dir/symlink_test/a")
+    expect (file.is-directory "$tmp-dir/symlink_test/b")
+    expect (file.is-directory "$tmp-dir/symlink_test/a/sym_b" --follow-links)
+    if platform != PLATFORM-WINDOWS:
       // Git bash can support symlinks, but they need to be enabled in a configuration.
       // The Github builders seem to have them disabled.
-      expect_not (file.is_directory "$tmp_dir/symlink_test/a/sym_b" --no-follow_links)
+      expect-not (file.is-directory "$tmp-dir/symlink_test/a/sym_b" --no-follow-links)
 
     // Recursive rmdir should not follow symlinks.
-    directory.rmdir --recursive "$tmp_dir/symlink_test/a"
-    expect_not (file.is_directory "$tmp_dir/symlink_test/a")
-    expect (file.is_directory "$tmp_dir/symlink_test/b")
-    expect (file.is_file "$tmp_dir/symlink_test/b/foo.txt")
+    directory.rmdir --recursive "$tmp-dir/symlink_test/a"
+    expect-not (file.is-directory "$tmp-dir/symlink_test/a")
+    expect (file.is-directory "$tmp-dir/symlink_test/b")
+    expect (file.is-file "$tmp-dir/symlink_test/b/foo.txt")

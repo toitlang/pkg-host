@@ -2,6 +2,8 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import system
+
 /**
 The environment variables of the system.
 
@@ -16,7 +18,7 @@ class EnvironmentVariableMap:
   It is an error if the key is not a currently defined environment variable.
   */
   operator [] key/string -> string:
-    result := get_env_ key
+    result := get-env_ key
     if not result: throw "ENV NOT FOUND"
     return result
 
@@ -29,14 +31,14 @@ class EnvironmentVariableMap:
     they currently share environment variables.
   */
   operator []= key/string value/string -> none:
-    set_env_ key value
+    set-env_ key value
 
   /**
   Gets the current value of an environment variable.
   Returns null if the key is not a currently defined environment variable.
   */
   get key/string -> string?:
-    return get_env_ key
+    return get-env_ key
 
   /**
   Returns true iff the key is an environment variable that is currently defined.
@@ -48,7 +50,7 @@ class EnvironmentVariableMap:
   Removes an environment variable from the current set of defined variables.
   */
   remove key/string -> none:
-    set_env_ key null
+    set-env_ key null
 
 /**
 A map-like object that represents the environment variables of the current
@@ -56,8 +58,8 @@ A map-like object that represents the environment variables of the current
 */
 env / EnvironmentVariableMap ::= EnvironmentVariableMap.private_
 
-get_env_ key/string -> string?:
-  #primitive.core.get_env
+get-env_ key/string -> string?:
+  #primitive.core.get-env
 
-set_env_ key/string value/string? -> none:
-  #primitive.core.set_env
+set-env_ key/string value/string? -> none:
+  #primitive.core.set-env

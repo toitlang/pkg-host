@@ -10,7 +10,6 @@ set(TPKG_EXEC "toit.pkg${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "The executabl
 set(TEST_TIMEOUT 40 CACHE STRING "The maximal amount of time each test is allowed to run")
 set(SLOW_TEST_TIMEOUT 200 CACHE STRING "The maximal amount of time each slow test is allowed to run")
 
-message("TPKG: ${TPKG_EXEC}")
 add_custom_target(
   "install-pkgs"
   COMMAND "${TPKG_EXEC}" install
@@ -25,9 +24,10 @@ add_executable(
 include(ProcessorCount)
 ProcessorCount(NUM_CPU)
 
+# Add a custom target 'check' that runs our unit tests.
 add_custom_target(
-  check
-  COMMAND ${CMAKE_CTEST_COMMAND} -j${NUM_CPU} -T test --output-on-failure
+  "check"
+  COMMAND "${CMAKE_CTEST_COMMAND}" -j${NUM_CPU} --output-on-failure -C Debug
   USES_TERMINAL
 )
 

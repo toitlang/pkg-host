@@ -10,25 +10,25 @@ import writer show Writer
 
 expect_ name [code]:
   exception := catch code
-  if not exception.starts_with name:
+  if not exception.starts-with name:
     print "Expected something that starts with $name but got $exception"
   expect
-    exception.starts_with name
+    exception.starts-with name
 
-expect_file_not_found [code]:
+expect-file-not-found [code]:
   expect_ "FILE_NOT_FOUND" code
 
 main:
-  expect_file_not_found: chdir "non_existing_dir"
-  if file.is_file "/etc/resolv.conf":
-    expect_file_not_found: chdir "/etc/resolv.conf"
-  if file.is_file "C:/Windows/System32/cmd.exe":
-    expect_file_not_found: chdir "C:/Windows/System32/cmd.exe"
+  expect-file-not-found: chdir "non_existing_dir"
+  if file.is-file "/etc/resolv.conf":
+    expect-file-not-found: chdir "/etc/resolv.conf"
+  if file.is-file "C:/Windows/System32/cmd.exe":
+    expect-file-not-found: chdir "C:/Windows/System32/cmd.exe"
 
-  random_name := "test_dir_$(random 1_000_000_000)"
-  new_name := "test_dir_$(random 1_000_000_000)"
-  mkdir random_name
-  chdir random_name
-  file.rename "../$random_name" "../$new_name"
+  random-name := "test_dir_$(random 1_000_000_000)"
+  new-name := "test_dir_$(random 1_000_000_000)"
+  mkdir random-name
+  chdir random-name
+  file.rename "../$random-name" "../$new-name"
   chdir ".."
-  rmdir new_name
+  rmdir new-name

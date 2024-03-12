@@ -9,23 +9,19 @@ import host.directory
 import semver
 
 main args:
-  if platform == "Windows" and (semver.compare vm-sdk-version "v2.0.0-alpha.114") < 0:
-    print "This test requires a newer version of the SDK."
-    exit 0
-
   if args[0] == "--run-test":
-    test_not_existing
+    test-not-existing
     return
 
-  toit_run := args[0]
-  test_not_existing
+  toit-run := args[0]
+  test-not-existing
 
   5.repeat:
-    pipe.run_program toit_run "tests/dir_test.toit" "--run-test"
+    pipe.run-program toit-run "tests/dir_test.toit" "--run-test"
 
-test_not_existing:
+test-not-existing:
   50.repeat:
     exception := catch:
       files := directory.DirectoryStream "not-existing"
       unreachable
-    expect_not_null exception
+    expect-not-null exception

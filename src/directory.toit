@@ -8,6 +8,11 @@
 import system
 import .file as file
 
+/**
+The default directory separator for the underlying operating system.
+*/
+SEPARATOR/string ::= (system.platform == system.PLATFORM-WINDOWS) ? "\\" : "/"
+
 /** Removes an empty directory. */
 rmdir path/string -> none:
   #primitive.file.rmdir
@@ -16,20 +21,64 @@ rmdir path/string -> none:
 Removes the directory and all its content.
 
 Does not follow symlinks, but removes the symlink itself.
+
+If $force is true, also deletes files in read-only directories. This only
+  has an effect when $recursive is set.
 */
-rmdir path/string --recursive/bool -> none:
+rmdir path/string --recursive/bool --force/bool=false -> none:
   if not recursive:
     rmdir path
     return
-  stream := DirectoryStream path
-  while entry := stream.next:
-    child := "$path/$entry"
-    if file.is_directory child --no-follow_links:
-      rmdir --recursive child
+  dir-stat := file.stat --no-follow-links path
+  if dir-stat[file.ST-TYPE] != file.DIRECTORY:
+    throw "NOT_A_DIRECTORY"
+
+  // A queue of directories to delete. Each entry is a pair of a path and a
+  // boolean indicating whether the directory is known to be empty.
+  queue := Deque
+  queue.add [path, false]
+  while not queue.is-empty:
+    queue-entry := queue.last
+    path = queue-entry[0]
+    is-empty := queue-entry[1]
+    if force:
+      // Catch any exception in case we don't have the rights to change the
+      // permissions. In that case we will fail when we need to delete a file later.
+      catch:
+        dir-stat = file.stat --no-follow-links path
+        permissions := dir-stat[file.ST-MODE]
+        if system.platform == system.PLATFORM-WINDOWS:
+          if permissions & file.WINDOWS-FILE-ATTRIBUTE-READONLY != 0:
+            file.chmod path (dir-stat[file.ST-MODE] & ~file.WINDOWS-FILE-ATTRIBUTE-READONLY)
+        else:
+          OWNER-READ-WRITE-SEARCH := 0b111_000_000
+          if permissions & OWNER-READ-WRITE-SEARCH != OWNER-READ-WRITE-SEARCH:
+            file.chmod path (dir-stat[file.ST-MODE] | OWNER-READ-WRITE-SEARCH)
+    if not is-empty:
+      is-empty = true
+      stream := DirectoryStream path
+      try:
+        while entry := stream.next:
+          child := "$path/$entry"
+          type := (file.stat --no-follow-links child)[file.ST-TYPE]
+          if type == file.DIRECTORY:
+            queue.add [child, false]
+            is-empty = false
+          else if type == file.DIRECTORY-SYMBOLIC-LINK:
+            // Windows special handling of symbolic links to a directory.
+            // Note that the `rmdir` is not recursive.
+            rmdir child
+          else:
+            file.delete child
+      finally:
+        stream.close
+    if is-empty:
+      queue.remove-last
+      rmdir path
     else:
-      file.delete child
-  stream.close
-  rmdir path
+      // The next time we see this entry, we know it's empty, as
+      // all children will have been removed.
+      queue-entry[1] = true
 
 /**
 Creates an empty directory.
@@ -51,14 +100,19 @@ mkdir --recursive/bool path/string mode/int=0x1ff -> none:
     mkdir path mode
     return
 
-  built_path := ""
+  // TODO(florian): This doesn't work for UNC drives on Windows.
+  // We must not split the volume name.
+  if system.platform == system.PLATFORM-WINDOWS:
+    path = path.replace --all "\\" "/"
+
+  built-path := ""
   parts := path.split "/"
   parts.size.repeat:
     part := parts[it]
-    built_path += "$part"
-    if part != "" and not file.is_directory built_path:
-      mkdir built_path mode
-    built_path += "/"
+    built-path += "$part"
+    if part != "" and not file.is-directory built-path:
+      mkdir built-path mode
+    built-path += "/"
 
 /**
 Creates a fresh directory with the given prefix.
@@ -81,7 +135,7 @@ print test_dir  // => "/tmp/test-1v42wp"  (for example).
 ```
 */
 mkdtemp prefix/string="" -> string:
-  return (mkdtemp_ prefix).to_string
+  return (mkdtemp_ prefix).to-string
 
 mkdtemp_ prefix/string -> ByteArray:
   #primitive.file.mkdtemp
@@ -94,11 +148,11 @@ chdir name:
 // An open directory, used to iterate over the named entries in a directory.
 class DirectoryStream:
   dir_ := null
-  is_closed_/bool := false
+  is-closed_/bool := false
 
   constructor name:
     error := catch:
-      dir_ = opendir_ resource_freeing_module_ name
+      dir_ = opendir_ resource-freeing-module_ name
     if error is string:
       throw "$error: \"$name\""
     else if error:
@@ -111,7 +165,7 @@ class DirectoryStream:
   Returns null when no entries are left.
   */
   next -> string?:
-    if is_closed_: throw "ALREADY_CLOSED"
+    if is-closed_: throw "ALREADY_CLOSED"
     // We automatically dispose the underlying resource when
     // we reach the end of the stream. In that case, we return
     // null because we know that no more entries are left.
@@ -122,12 +176,12 @@ class DirectoryStream:
       if not bytes:
         dispose_
         return null
-      str := bytes.to_string
+      str := bytes.to-string
       if str == "." or str == "..": continue
       return str
 
   close -> none:
-    is_closed_ = true
+    is-closed_ = true
     dispose_
 
   dispose_ -> none:
@@ -135,25 +189,25 @@ class DirectoryStream:
     if not dir: return
     dir_ = null
     closedir_ dir
-    remove_finalizer this
+    remove-finalizer this
 
-opendir_ resource_group name:
+opendir_ resource-group name:
   #primitive.file.opendir2
 
-readdir_ dir -> ByteArray:
+readdir_ directory -> ByteArray:
   #primitive.file.readdir
 
-closedir_ dir:
+closedir_ directory:
   #primitive.file.closedir
 
-same_entry_ a b:
-  if a[file.ST_INO] != b[file.ST_INO]: return false
-  return a[file.ST_DEV] == b[file.ST_DEV]
+same-entry_ a b:
+  if a[file.ST-INO] != b[file.ST-INO]: return false
+  return a[file.ST-DEV] == b[file.ST-DEV]
 
-is_absolute_ path:
-  if path.starts_with "/": return true
-  if system.platform == system.PLATFORM_WINDOWS:
-    if path.starts_with "//" or path.starts_with "\\\\": return true
+is-absolute_ path:
+  if path.starts-with "/": return true
+  if system.platform == system.PLATFORM-WINDOWS:
+    if path.starts-with "//" or path.starts-with "\\\\": return true
     if path.size >= 3 and path[1] == ':': return true
   return false
 
@@ -166,7 +220,7 @@ realpath path:
   // Relative paths must be prepended with the current directory, and we can't
   // let the C realpath routine do that for us, because it doesn't understand
   // what our current directory is.
-  if not is_absolute_ path:
+  if not is-absolute_ path:
     path = "$cwd/$path"
   #primitive.file.realpath
 
@@ -180,15 +234,15 @@ cwd:
     pos := ""
     while true:
       dot := file.stat "$(pos)."
-      dot_dot := file.stat "$(pos).."
-      if same_entry_ dot dot_dot:
+      dot-dot := file.stat "$(pos).."
+      if same-entry_ dot dot-dot:
         return dir == "" ? "/" : dir
       found := false
       above := DirectoryStream "$(pos).."
       while name := above.next:
-        name_stat := file.stat "$(pos)../$name" --follow_links=false
-        if name_stat:
-          if same_entry_ name_stat dot:
+        name-stat := file.stat "$(pos)../$name" --follow-links=false
+        if name-stat:
+          if same-entry_ name-stat dot:
             dir = "/$name$dir"
             found = true
             break
