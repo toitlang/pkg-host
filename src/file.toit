@@ -145,7 +145,7 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
   write data from/int=0 to/int=data.size -> int:
     return try-write_ data from to
 
-  try-write_ data/io.Data from to -> int:
+  try-write_ data/io.Data from/int to/int -> int:
     return write_ fd_ data from to
 
   close -> none:
@@ -256,7 +256,7 @@ read_ descriptor:
   #primitive.file.read
 
 // Writes part of the io.Data to the open file descriptor.
-write_ descriptor data from to:
+write_ descriptor data/io.Data from/int to/int:
   return #primitive.file.write: | error |
     written := 0
     io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
