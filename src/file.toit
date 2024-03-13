@@ -3,7 +3,6 @@
 // found in the package's LICENSE file.
 
 import reader as old-reader
-import writer show Writer
 import io
 
 import system
@@ -174,7 +173,8 @@ read-content file-name/string -> ByteArray:
   if length == 0: return #[]
   file := Stream.for-read file-name
   try:
-    byte-array := file.in.read
+    reader := file.in
+    byte-array := reader.read
     if not byte-array: throw "CHANGED_SIZE"
     if byte-array.size == length: return byte-array
     proxy := create-off-heap-byte-array length
@@ -182,7 +182,7 @@ read-content file-name/string -> ByteArray:
       proxy.replace pos byte-array 0 byte-array.size
       pos += byte-array.size
       if pos == length: return proxy
-      byte-array = file.in.read
+      byte-array = reader.read
       if not byte-array: throw "CHANGED_SIZE"
     return proxy
   finally:
@@ -467,13 +467,11 @@ copy_ --source/string --target/string --dereference/bool --recursive/bool --queu
 
   in-stream := Stream.for-read source
   out-stream := Stream.for-write target --permissions=source-stat[ST-MODE]
-  out-writer := Writer out-stream
   try:
-    while data := in-stream.read:
-      out-writer.write data
+    out-stream.out.write-from in-stream.in
   finally:
     in-stream.close
-    out-writer.close
+    out-stream.close
 
 /**
 Returns the directory part of the given $path.

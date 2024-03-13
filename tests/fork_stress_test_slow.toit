@@ -2,11 +2,10 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/TESTS_LICENSE file.
 
-import host.pipe
-import reader show BufferedReader
-import monitor
 import expect show *
-import writer show Writer
+import host.pipe
+import io
+import monitor
 import semver
 
 class Stress:
@@ -31,14 +30,14 @@ class Stress:
     pipe.dont-wait-for pid
     channel.send "$id: forked"
 
-    pipe-writer := Writer to
+    pipe-writer := to
     // Stress pipes.
     LINES-COUNT ::= 500
     for i := 0; i < LINES-COUNT; i++:
       pipe-writer.write "line$i\n"
     pipe-writer.close
 
-    reader := BufferedReader from
+    reader := from.in
     read-counter := 0
     while true:
       line := reader.read-line

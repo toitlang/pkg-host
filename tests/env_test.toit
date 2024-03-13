@@ -36,11 +36,11 @@ main args:
       (pipe.backticks shell + ["$toit-exe tests/echo.toit BAR=\$BAR"]).trim
 
   fd := pipe.from --environment={"FISH": "HORSE"} toit-exe "tests/echo.toit" "\$FISH"
-  expect-equals "HORSE" fd.read.to-string.trim
+  expect-equals "HORSE" fd.in.read.to-string.trim
 
   user := os.env.get "USER"
   if user:
     expect-equals "$user"
       (pipe.backticks shell + ["$toit-exe tests/echo.toit \$USER"]).trim
     user-fd := pipe.from --environment={"USER": null} toit-exe "tests/echo.toit" "\$USER"
-    expect-equals "" user-fd.read.to-string.trim
+    expect-equals "" user-fd.in.read.to-string.trim

@@ -6,7 +6,6 @@ import expect show *
 
 import host.file
 import host.directory show *
-import writer show Writer
 import system show platform PLATFORM-WINDOWS
 
 expect_ name [code]:
@@ -32,13 +31,13 @@ main:
 
   nul-device := (platform == PLATFORM-WINDOWS ? "\\\\.\\NUL" : "/dev/null")
   open-file := file.Stream.for-read nul-device
-  byte-array := open-file.read
+  byte-array := open-file.in.read
   expect (not byte-array)
   open-file.close
   expect-already-closed: open-file.close
 
   open-file = file.Stream nul-device file.RDONLY
-  byte-array = open-file.read
+  byte-array = open-file.in.read
   expect (not byte-array)
   open-file.close
   expect-already-closed: open-file.close
@@ -67,7 +66,7 @@ main:
       test-out := file.Stream.for-write filename
 
       try:
-        test-out.write test-contents
+        test-out.out.write test-contents
         test-out.close
 
         10000.repeat:
@@ -98,7 +97,7 @@ main:
       try:
         from := 5
         to := 7
-        test-out.write test-contents from to
+        test-out.out.write test-contents from to
         test-out.close
 
         read-back := (file.read-content filename).to-string
@@ -150,7 +149,7 @@ main:
       expect-equals null (realpath "fætter");
 
       test-out = file.Stream filename file.CREAT | file.WRONLY 0x1ff
-      test-out.write test-contents
+      test-out.out.write test-contents
       test-out.close
 
       expect-equals test-contents.size (file.size filename)
@@ -189,8 +188,7 @@ test-recursive test-dir:
   ]
   paths.do:
     stream := file.Stream.for-write it
-    writer := (Writer stream)
-    stream.write it
+    stream.out.write it
     stream.close
 
   paths.do:
