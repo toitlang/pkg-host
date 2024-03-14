@@ -82,12 +82,12 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
   read -> ByteArray?:
     return in.read
 
-  consume_ -> ByteArray?:
+  read_ -> ByteArray?:
     if input_ == PARENT-TO-CHILD_:
       throw "read from an output pipe"
     while true:
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
-      result := read_ resource_
+      result := read-from-pipe_ resource_
       if result != -1:
         if result == null:
           try:
@@ -107,7 +107,7 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
     if input_ == CHILD-TO-PARENT_:
       throw "write to an input pipe"
     state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
-    bytes-written := write-primitive_ resource_ data from to
+    bytes-written := write-to-pipe_ resource_ data from to
     if bytes-written == 0: state_.clear-state WRITE-EVENT_
     return bytes-written
 
@@ -145,16 +145,16 @@ pipe-init_:
 create-pipe_ resource-group input/bool:
   #primitive.pipe.create-pipe
 
-write-primitive_ pipe data/io.Data from to:
+write-to-pipe_ pipe data/io.Data from to:
   #primitive.pipe.write: | error |
     written := 0
     io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
-      chunk-written := write_primitive_ pipe chunk 0 chunk.size
+      chunk-written := write-to-pipe_ pipe chunk 0 chunk.size
       written += chunk-written
       if chunk-written < chunk.size: return written
     return written
 
-read_ pipe:
+read-from-pipe_ pipe:
   #primitive.pipe.read
 
 close_ pipe:

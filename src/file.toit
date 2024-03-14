@@ -133,8 +133,8 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
   read -> ByteArray?:
     return in.read
 
-  consume_ -> ByteArray?:
-    return read_ fd_
+  read_ -> ByteArray?:
+    return read-from-descriptor_ fd_
 
   /**
   Writes part of the string or ByteArray to the open file descriptor.
@@ -146,7 +146,7 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
     return try-write_ data from to
 
   try-write_ data/io.Data from/int to/int -> int:
-    return write_ fd_ data from to
+    return write-to-descriptor_ fd_ data from to
 
   close -> none:
     close_ fd_
@@ -252,15 +252,15 @@ is-open-file_ fd:
 
 // Reads some data from the file, returning a byte array.  Returns null on
 // end-of-file.
-read_ descriptor:
+read-from-descriptor_ descriptor:
   #primitive.file.read
 
 // Writes part of the io.Data to the open file descriptor.
-write_ descriptor data/io.Data from/int to/int:
+write-to-descriptor_ descriptor data/io.Data from/int to/int:
   return #primitive.file.write: | error |
     written := 0
     io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
-      chunk-written := write_ descriptor chunk 0 chunk.size
+      chunk-written := write-to-descriptor_ descriptor chunk 0 chunk.size
       written += chunk-written
       if chunk-written < chunk.size: return written
     return written
