@@ -2,11 +2,10 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-import bytes
 import .file as file
-import reader
+import io
 import monitor
-import writer show Writer
+import reader as old-reader
 import system as sdk-system
 
 process-resource-group_ ::= process-init_
@@ -43,7 +42,7 @@ get-standard-pipe_ fd/int:
 A program may be executed with an open file descriptor.  This is similar
   to the technique used by the shell to launch programs with their stdin,
   stdout and stderr attached to pipes or files.  Given the number of
-  the file descriptor this function will return a $reader.Reader or writer
+  the file descriptor this function will return a $old-reader.Reader or writer
   object.  You are expected to know which direction the file descriptor has.
 */
 get-numbered-pipe fd/int:
@@ -54,7 +53,7 @@ get-numbered-pipe fd/int:
   else:
     return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
-class OpenPipe implements reader.Reader:
+class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.Reader:
   resource_ := ?
   state_ := ?
   pid := null
@@ -77,12 +76,18 @@ class OpenPipe implements reader.Reader:
     child-process-name_ = null
     state_ = monitor.ResourceState_ pipe-resource-group_ resource_
 
+  /**
+  Deprecated. Use 'read' on $in instead.
+  */
   read -> ByteArray?:
+    return in.read
+
+  read_ -> ByteArray?:
     if input_ == PARENT-TO-CHILD_:
       throw "read from an output pipe"
     while true:
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
-      result := read_ resource_
+      result := read-from-pipe_ resource_
       if result != -1:
         if result == null:
           try:
@@ -92,12 +97,18 @@ class OpenPipe implements reader.Reader:
         return result
       state_.clear-state READ-EVENT_
 
+  /**
+  Deprecated. Use 'write' or 'try-write' on $out instead.
+  */
   write x from = 0 to = x.size:
+    return try-write_ x from to
+
+  try-write_ data/io.Data from/int to/int -> int:
     if input_ == CHILD-TO-PARENT_:
       throw "write to an input pipe"
     if from == to: return 0
     state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
-    bytes-written := write-primitive_ resource_ x from to
+    bytes-written := write-to-pipe_ resource_ data from to
     if bytes-written == 0: state_.clear-state WRITE-EVENT_
     return bytes-written
 
@@ -135,10 +146,16 @@ pipe-init_:
 create-pipe_ resource-group input/bool:
   #primitive.pipe.create-pipe
 
-write-primitive_ pipe x from to:
-  #primitive.pipe.write
+write-to-pipe_ pipe data/io.Data from to:
+  #primitive.pipe.write: | error |
+    written := 0
+    io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
+      chunk-written := write-to-pipe_ pipe chunk 0 chunk.size
+      written += chunk-written
+      if chunk-written < chunk.size: return written
+    return written
 
-read_ pipe:
+read-from-pipe_ pipe:
   #primitive.pipe.read
 
 close_ pipe:
@@ -230,7 +247,7 @@ windows-escape_ path/string -> string:
   // The path contains spaces or quotes, so we have to escape.
   // Make the buffer a little larger than the path in the hope that we don't
   // have to grow it while building.
-  accumulator := bytes.Buffer.with-initial-size (path.size + 4 + (path.size >> 2))
+  accumulator := io.Buffer.with-capacity (path.size + 4 + (path.size >> 2))
   accumulator.write-byte '"'  // Initial double quote.
   backslashes := 0
   path.size.repeat:
@@ -360,9 +377,8 @@ backticks --environment/Map?=null arguments -> string:
   stdout := pipe-ends.fd
   pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
-  reader := reader.BufferedReader pipe-ends
-  reader.buffer-all
-  output := reader.read-string (reader.buffered)
+  pipe-ends.in.buffer-all
+  output := pipe-ends.in.read-string (pipe-ends.in.buffered-size)
   try:
     check-exit_ child-process arguments[0]
   finally:
@@ -479,7 +495,7 @@ exit-signal exit-value/int -> int?:
 
 // Temporary method, until printing to stdout is easier without allocating a `Writer`.
 print-to_ pipe msg/string:
-  writer := Writer pipe
+  writer/io.Writer := pipe.out
   writer.write msg
   writer.write "\n"
 

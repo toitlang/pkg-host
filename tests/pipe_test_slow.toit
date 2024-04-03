@@ -43,10 +43,10 @@ low-level-test toit-exe:
   array := pipe.fork true INHERIT stdout INHERIT toit-exe ["ignored-0-argument", "tests/echo.toit", "horse"]
   expect-equals
     "horse"
-    output.read.to-string.trim
+    output.in.read.to-string.trim
   expect-equals
     null
-    output.read
+    output.in.read
 
 main args:
   if args.size < 1:
@@ -118,8 +118,8 @@ main args:
 
     try:
       p := pipe.to "sh" "-c" "tr A-Z a-z > $dirname/$filename"
-      p.write #[]  // Make sure we can deal with empty writes.
-      p.write "The contents of the file"
+      p.out.write #[]  // Make sure we can deal with empty writes.
+      p.out.write "The contents of the file"
       p.close
 
       expect (file.size "$dirname/$filename") != null
@@ -127,18 +127,13 @@ main args:
       chdir dirname
       go-up = true
 
-      output := ""
       if platform == PLATFORM-WINDOWS:
         p = pipe.from "certutil" "-hashfile" filename
-        while byte-array := p.read:
-          output += byte-array.to-string
-
+        output := p.in.read-all.to-string
         expect output == "SHA1 hash of $filename:\r\n2dcc8e172c72f3d6937d49be7cf281067d257a62\r\nCertUtil: -hashfile command completed successfully.\r\n"
       else:
         p = pipe.from "shasum" filename
-        while byte-array := p.read:
-          output += byte-array.to-string
-
+        output := p.in.read-all.to-string
         expect output == "2dcc8e172c72f3d6937d49be7cf281067d257a62  $filename\n"
 
       chdir ".."
@@ -158,16 +153,14 @@ main args:
   if platform == PLATFORM-WINDOWS:
     expect-error "certutil: exited with status 2":
       p := pipe.from "certutil" "file_that_doesn't exist"
-      while p.read:
-        // Do nothing.
+      p.in.drain
 
     expect-error "certutil: exited with status 2":
       sum := pipe.backticks "certutil" "file_that_doesn't exist"
   else:
     expect-error "shasum: exited with status 1":
       p := pipe.from "shasum" "file_that_doesn't exist"
-      while p.read:
-        // Do nothing.
+      p.in.drain
 
     expect-error "shasum: exited with status 1":
       sum := pipe.backticks "shasum" "file_that_doesn't exist"
@@ -207,7 +200,7 @@ pipe-large-file:
     buffer := ByteArray 1024 * 10
     o := pipe.to [md5sum]
     for i := 0; i < 100; i++:
-      o.write buffer
+      o.out.write buffer
     o.close
 
 write-closed-stdin-exception:
@@ -216,5 +209,5 @@ write-closed-stdin-exception:
 
     expect-error "Broken pipe":
       while true:
-        stdin.write
+        stdin.out.write
           ByteArray 1024
