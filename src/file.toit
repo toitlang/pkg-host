@@ -133,8 +133,8 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
   read -> ByteArray?:
     return in.read
 
-  consume_ -> ByteArray?:
-    return read_ fd_
+  read_ -> ByteArray?:
+    return primitive-read_ fd_
 
   /**
   Writes part of the string or ByteArray to the open file descriptor.
@@ -252,7 +252,7 @@ is-open-file_ fd:
 
 // Reads some data from the file, returning a byte array.  Returns null on
 // end-of-file.
-read_ descriptor:
+primitive-read_ descriptor:
   #primitive.file.read
 
 // Writes part of the io.Data to the open file descriptor.
