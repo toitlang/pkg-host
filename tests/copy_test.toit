@@ -16,8 +16,8 @@ with-tmp-dir [block]:
     directory.rmdir --force --recursive tmp-dir
 
 main:
-  // test-recursive
-  // test-permissions
+  test-recursive
+  test-permissions
   test-symlinks
 
 test-recursive:
@@ -34,16 +34,9 @@ test-recursive:
     file.copy --source=tmp-file --target=file2
     expect-equals content (file.read-content file2)
 
-    // Copy of absolute path to absolute directory path.
-    subdir := "$tmp-dir/subdir"
-    directory.mkdir subdir
-    sub-file := "$subdir/file.txt"
-    file.copy --source=tmp-file --target=subdir
-    expect-equals content (file.read-content sub-file)
-
     // Copy of relative file to relative directory path.
     directory.mkdir "subdir2"
-    file.copy --source="file.txt" --target="subdir2"
+    file.copy --source="file.txt" --target="subdir2/file.txt"
     expect-equals content (file.read-content "subdir2/file.txt")
     expect-equals content (file.read-content "$tmp-dir/subdir2/file.txt")
 
@@ -54,16 +47,24 @@ test-recursive:
     expect-equals content (file.read-content "subdir3/file.txt")
     expect-equals other-content (file.read-content "subdir3/nested-subdir/other.txt")
 
+    // Copy recursive to existing directory.
+    directory.mkdir "subdir4"
+    file.copy --source="subdir3" --target="subdir4" --recursive
+    expect-equals content (file.read-content "subdir4/file.txt")
+    expect-equals other-content (file.read-content "subdir4/nested-subdir/other.txt")
+
 test-permissions:
   file-permission0/int := ?
   file-permission1/int := ?
   dir-permission/int := ?
   read-only-dir-permission/int := ?
   if platform == PLATFORM-WINDOWS:
-    file-permission0 = file.WINDOWS-FILE-ATTRIBUTE-HIDDEN | file.WINDOWS-FILE-ATTRIBUTE-NORMAL
-    file-permission1 = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-NORMAL
-    dir-permission = 0
-    read-only-dir-permission = file.WINDOWS-FILE-ATTRIBUTE-READONLY
+    // We use the "archive" attribute, since we modify the files, and this is the default
+    // attribute for modified files. The idea is that the backup software clears this bit.
+    file-permission0 = file.WINDOWS-FILE-ATTRIBUTE-HIDDEN | file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE
+    file-permission1 = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-ARCHIVE
+    dir-permission = file.WINDOWS-FILE-ATTRIBUTE-DIRECTORY
+    read-only-dir-permission = file.WINDOWS-FILE-ATTRIBUTE-READONLY | file.WINDOWS-FILE-ATTRIBUTE-DIRECTORY
   else:
     file-permission0 = 0b111_000_000
     file-permission1 = 0b100_000_000

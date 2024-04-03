@@ -106,6 +106,7 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
   try-write_ data/io.Data from/int to/int -> int:
     if input_ == CHILD-TO-PARENT_:
       throw "write to an input pipe"
+    if from == to: return 0
     state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
     bytes-written := write-primitive_ resource_ data from to
     if bytes-written == 0: state_.clear-state WRITE-EVENT_
@@ -195,6 +196,8 @@ fork use-path stdin stdout stderr command arguments -> List
     --environment/Map?=null
     --file-descriptor-3/OpenPipe?=null
     --file-descriptor-4/OpenPipe?=null:
+  if (arguments.any: it is not string):
+    throw "INVALID_ARGUMENT"
   if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
     arguments = arguments.map: windows-escape_ it
   result := List 4
@@ -268,19 +271,19 @@ windows-escape_ path/string -> string:
   return accumulator.bytes.to-string
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command arg1 -> OpenPipe:
+to --environment/Map?=null command/string arg1/string -> OpenPipe:
   return to --environment=environment [command, arg1]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command arg1 arg2 -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string -> OpenPipe:
   return to --environment=environment [command, arg1, arg2]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command arg1 arg2 arg3 -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string arg3/string -> OpenPipe:
   return to --environment=environment [command, arg1, arg2, arg3]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command arg1 arg2 arg3 arg4 -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> OpenPipe:
   return to --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -305,19 +308,19 @@ to --environment/Map?=null arguments -> OpenPipe:
   return pipe-ends
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command arg1 -> OpenPipe:
+from --environment/Map?=null command/string arg1/string -> OpenPipe:
   return from --environment=environment [command, arg1]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command arg1 arg2 -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string -> OpenPipe:
   return from --environment=environment [command, arg1, arg2]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command arg1 arg2 arg3 -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string arg3/string -> OpenPipe:
   return from --environment=environment [command, arg1, arg2, arg3]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command arg1 arg2 arg3 arg4 -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> OpenPipe:
   return from --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -343,19 +346,19 @@ from --environment/Map?=null arguments -> OpenPipe:
   return pipe-ends
 
 /// Variant of $(backticks arguments).
-backticks --environment/Map?=null command arg1 -> string:
+backticks --environment/Map?=null command/string arg1/string -> string:
   return backticks --environment=environment [command, arg1]
 
 /// Variant of $(backticks arguments).
-backticks --environment/Map?=null command arg1 arg2 -> string:
+backticks --environment/Map?=null command/string arg1/string arg2/string -> string:
   return backticks --environment=environment [command, arg1, arg2]
 
 /// Variant of $(backticks arguments).
-backticks --environment/Map?=null command arg1 arg2 arg3 -> string:
+backticks --environment/Map?=null command/string arg1/string arg2/string arg3/string -> string:
   return backticks --environment=environment [command, arg1, arg2, arg3]
 
 /// Variant of $(backticks arguments).
-backticks --environment/Map?=null command arg1 arg2 arg3 arg4 -> string:
+backticks --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> string:
   return backticks --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -415,19 +418,19 @@ system --environment/Map?=null command -> int?:
     return run-program --environment=environment ["/bin/sh", "-c", command]
 
 /// Variant of $(run-program arguments).
-run-program --environment/Map?=null command arg1 -> int?:
+run-program --environment/Map?=null command/string arg1/string -> int?:
   return run-program [command, arg1]
 
 /// Variant of $(run-program arguments).
-run-program --environment/Map?=null command arg1 arg2 -> int?:
+run-program --environment/Map?=null command/string arg1/string arg2/string -> int?:
   return run-program [command, arg1, arg2]
 
 /// Variant of $(run-program arguments).
-run-program --environment/Map?=null command arg1 arg2 arg3 -> int?:
+run-program --environment/Map?=null command/string arg1/string arg2/string arg3/string -> int?:
   return run-program [command, arg1, arg2, arg3]
 
 /// Variant of $(run-program arguments).
-run-program --environment/Map?=null command arg1 arg2 arg3 arg4 -> int?:
+run-program --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> int?:
   return run-program [command, arg1, arg2, arg3, arg4]
 
 /**
