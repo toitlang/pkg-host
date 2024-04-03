@@ -300,7 +300,7 @@ The $environment argument is used as in $fork.
 */
 to --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
-    return to [arguments]
+    arguments = [arguments]
   pipe-ends := OpenPipe true --child-process-name=arguments[0]
   stdin := pipe-ends.fd
   pipes := fork --environment=environment true stdin PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
@@ -338,7 +338,7 @@ The $environment argument is used as in $fork.
 */
 from --environment/Map?=null arguments -> OpenPipe:
   if arguments is string:
-    return from [arguments]
+    arguments = [arguments]
   pipe-ends := OpenPipe false --child-process-name=arguments[0]
   stdout := pipe-ends.fd
   pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
@@ -372,7 +372,7 @@ The $environment argument is used as in $fork.
 */
 backticks --environment/Map?=null arguments -> string:
   if arguments is string:
-    return backticks --environment=environment [arguments]
+    arguments = [arguments]
   pipe-ends := OpenPipe false
   stdout := pipe-ends.fd
   pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
@@ -444,7 +444,7 @@ The $environment argument is used as in $fork.
 */
 run-program --environment/Map?=null arguments -> int:
   if arguments is string:
-    return run-program [arguments]
+    arguments = [arguments]
   pipes := fork --environment=environment true PIPE-INHERITED PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
   exit-value := wait-for child-process
