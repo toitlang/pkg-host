@@ -67,7 +67,7 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Reader:
+class Stream extends Object with io.CloseableInMixin io.CloseableOutMixin implements old-reader.Reader:
   fd_ := ?
 
   constructor.internal_ .fd_:
@@ -147,6 +147,12 @@ class Stream extends Object with io.InMixin io.OutMixin implements old-reader.Re
 
   try-write_ data/io.Data from/int to/int -> int:
     return write-to-descriptor_ fd_ data from to
+
+  close-reader_ -> none:
+    close
+
+  close-writer_ -> none:
+    close
 
   close -> none:
     close_ fd_
