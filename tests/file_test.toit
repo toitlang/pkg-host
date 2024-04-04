@@ -67,7 +67,7 @@ main:
 
       try:
         test-out.out.write test-contents
-        test-out.close
+        test-out.out.close
 
         10000.repeat:
           file.read-content filename
@@ -83,7 +83,7 @@ main:
 
       test-out = file.Stream.for-write filename
       try:
-        test-out.close
+        test-out.out.close
         expect-equals
           ByteArray 0
           file.read-content filename
@@ -98,7 +98,7 @@ main:
         from := 5
         to := 7
         test-out.out.write test-contents from to
-        test-out.close
+        test-out.out.close
 
         read-back := (file.read-content filename).to-string
 
@@ -150,7 +150,7 @@ main:
 
       test-out = file.Stream filename file.CREAT | file.WRONLY 0x1ff
       test-out.out.write test-contents
-      test-out.close
+      test-out.out.close
 
       expect-equals test-contents.size (file.size filename)
       chdir ".."
@@ -189,7 +189,7 @@ test-recursive test-dir:
   paths.do:
     stream := file.Stream.for-write it
     stream.out.write it
-    stream.close
+    stream.out.close
 
   paths.do:
     expect (file.is-file it)

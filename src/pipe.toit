@@ -53,7 +53,29 @@ get-numbered-pipe fd/int:
   else:
     return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
-class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.Reader:
+class OpenPipeReader_ extends io.CloseableReader:
+  pipe_/OpenPipe
+
+  constructor .pipe_:
+
+  read_ -> ByteArray?:
+    return pipe_.read_
+
+  close_ -> none:
+    pipe_.close
+
+class OpenPipeWriter extends io.CloseableWriter:
+  pipe_/OpenPipe
+
+  constructor .pipe_:
+
+  try-write_ data/io.Data from/int to/int -> int:
+    return pipe_.try-write_ data from to
+
+  close_ -> none:
+    pipe_.close
+
+class OpenPipe implements old-reader.Reader:
   resource_ := ?
   state_ := ?
   pid := null
@@ -61,6 +83,8 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
   input_ /int := UNKNOWN-DIRECTION_
 
   fd := -1  // Other end of descriptor, for child process.
+  in_ /OpenPipeReader_? := null
+  out_ /OpenPipeWriter? := null
 
   constructor input/bool --child-process-name="child process":
     group := pipe-resource-group_
@@ -70,11 +94,29 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
     resource_ = pipe-pair[0]
     fd = pipe-pair[1]
     state_ = monitor.ResourceState_ pipe-resource-group_ resource_
+    if input:
+      in_ = null
+      out_ = OpenPipeWriter this
+    else:
+      in_ = OpenPipeReader_ this
+      out_ = null
 
   constructor.from-std_ .resource_:
     group := pipe-resource-group_
     child-process-name_ = null
     state_ = monitor.ResourceState_ pipe-resource-group_ resource_
+    in_ = OpenPipeReader_ this
+    out_ = OpenPipeWriter this
+
+  in -> io.CloseableReader:
+    if not in_:
+      throw "use of output pipe as input"
+    return in_
+
+  out -> io.CloseableWriter:
+    if not out_:
+      throw "use of input pipe as output"
+    return out_
 
   /**
   Deprecated. Use 'read' on $in instead.
@@ -83,8 +125,6 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
     return in.read
 
   read_ -> ByteArray?:
-    if input_ == PARENT-TO-CHILD_:
-      throw "read from an output pipe"
     while true:
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
       result := read-from-pipe_ resource_
@@ -104,8 +144,6 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
     return try-write_ x from to
 
   try-write_ data/io.Data from/int to/int -> int:
-    if input_ == CHILD-TO-PARENT_:
-      throw "write to an input pipe"
     if from == to: return 0
     state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
     bytes-written := write-to-pipe_ resource_ data from to
@@ -113,7 +151,7 @@ class OpenPipe extends Object with io.InMixin io.OutMixin implements old-reader.
     return bytes-written
 
   close:
-    close_ resource_
+    close-resource_ resource_
     if state_:
       state_.dispose
       state_ = null
@@ -158,10 +196,10 @@ write-to-pipe_ pipe data/io.Data from to:
 read-from-pipe_ pipe:
   #primitive.pipe.read
 
-close_ pipe:
-  return close_ pipe pipe-resource-group_
+close-resource_ pipe:
+  return close-resource_ pipe pipe-resource-group_
 
-close_ pipe resource-group:
+close-resource_ pipe resource-group:
   #primitive.pipe.close
 
 /// Use the stdin/stdout/stderr that the parent Toit process has.

@@ -168,7 +168,7 @@ main args:
   tar-exit-code := (platform == PLATFORM-LINUX) ? 2 : 1
   expect-error "tar: exited with status $tar-exit-code":
     p := pipe.to "tar" "-xvf" "-" "foo.txt"
-    p.close  // Close without sending a valid tar file.
+    p.out.close  // Close without sending a valid tar file.
 
   task:: long-running-sleep
 
@@ -201,7 +201,7 @@ pipe-large-file:
     o := pipe.to [md5sum]
     for i := 0; i < 100; i++:
       o.out.write buffer
-    o.close
+    o.out.close
 
 write-closed-stdin-exception:
   if file.is-file "/usr/bin/true":
