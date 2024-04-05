@@ -24,13 +24,13 @@ class Stress:
         [
           executable,
         ]
-    to   := pipes[0]
-    from := pipes[1]
+    to/pipe.OpenPipe   := pipes[0]
+    from/pipe.OpenPipe := pipes[1]
     pid  := pipes[3]
     pipe.dont-wait-for pid
     channel.send "$id: forked"
 
-    pipe-writer := to
+    pipe-writer := to.out
     // Stress pipes.
     LINES-COUNT ::= 500
     for i := 0; i < LINES-COUNT; i++:
