@@ -59,10 +59,10 @@ main:
     // Test permissions.
     dir0 := "$tmp-dir/perm0"
     mkdir dir0
-    file.write-content --path="$dir0/file1" "content"
+    file.write-contents --path="$dir0/file1" "content"
     dir1 := "$dir0/perm1"
     mkdir dir1
-    file.write-content --path="$dir1/file" "content"
+    file.write-contents --path="$dir1/file" "content"
 
     old-stat0 := file.stat dir0
     old-stat1 := file.stat dir1
@@ -82,7 +82,7 @@ main:
     // Test symbolic link.
     sym-file-target := "$tmp-dir/sym-file-target"
     sym-dir-target := "$tmp-dir/sym-dir-target"
-    file.write-content --path=sym-file-target "content"
+    file.write-contents --path=sym-file-target "content"
     mkdir sym-dir-target
 
     sub-dir := "$tmp-dir/sub-dir"

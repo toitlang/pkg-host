@@ -161,8 +161,10 @@ class Stream extends Object with io.CloseableInMixin io.CloseableOutMixin implem
     return false
 
 
-/// Deprecated. Use $read-content instead.
-read-contents name:
+/**
+Use $read-contents instead.
+*/
+read-content name:
   return read-content name
 
 /**
@@ -174,7 +176,7 @@ The content is stored in an off-heap ByteArray.
 On small devices with a flash filesystem, simply gets a view
   of the underlying bytes. (Not implemented yet)
 */
-read-content file-name/string -> ByteArray:
+read-contents file-name/string -> ByteArray:
   length := size file-name
   if length == 0: return #[]
   file := Stream.for-read file-name
@@ -194,6 +196,10 @@ read-content file-name/string -> ByteArray:
   finally:
     file.close
 
+/** Use $write-contents instead. */
+write-content content/io.Data --path/string --permissions/int?=null -> none:
+  write-contents content --path=path --permissions=permissions
+
 /**
 Writes the given $content to a file of the given $path.
 The file must not change while it is read into memory.
@@ -202,7 +208,7 @@ If $permissions is provided uses it to set the permissions of the file.
 The $permissions are only used if the file is created, and not if it is
   overwritten.
 */
-write-content content/io.Data --path/string --permissions/int?=null -> none:
+write-contents content/io.Data --path/string --permissions/int?=null -> none:
   stream := Stream.for-write path --permissions=permissions
   try:
     stream.out.write content

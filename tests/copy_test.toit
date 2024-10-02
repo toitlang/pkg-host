@@ -27,31 +27,31 @@ test-recursive:
 
     content := "foobar".to-byte-array
     other-content := "gee".to-byte-array
-    file.write-content --path=tmp-file content
+    file.write-contents --path=tmp-file content
 
     // Copy absolute path to absolute target path.
     file2 := "$tmp-dir/file2.txt"
     file.copy --source=tmp-file --target=file2
-    expect-equals content (file.read-content file2)
+    expect-equals content (file.read-contents file2)
 
     // Copy of relative file to relative directory path.
     directory.mkdir "subdir2"
     file.copy --source="file.txt" --target="subdir2/file.txt"
-    expect-equals content (file.read-content "subdir2/file.txt")
-    expect-equals content (file.read-content "$tmp-dir/subdir2/file.txt")
+    expect-equals content (file.read-contents "subdir2/file.txt")
+    expect-equals content (file.read-contents "$tmp-dir/subdir2/file.txt")
 
     // Copy recursive.
     directory.mkdir "subdir2/nested-subdir"
-    file.write-content --path="subdir2/nested-subdir/other.txt" other-content
+    file.write-contents --path="subdir2/nested-subdir/other.txt" other-content
     file.copy --source="subdir2" --target="subdir3" --recursive
-    expect-equals content (file.read-content "subdir3/file.txt")
-    expect-equals other-content (file.read-content "subdir3/nested-subdir/other.txt")
+    expect-equals content (file.read-contents "subdir3/file.txt")
+    expect-equals other-content (file.read-contents "subdir3/nested-subdir/other.txt")
 
     // Copy recursive to existing directory.
     directory.mkdir "subdir4"
     file.copy --source="subdir3" --target="subdir4" --recursive
-    expect-equals content (file.read-content "subdir4/file.txt")
-    expect-equals other-content (file.read-content "subdir4/nested-subdir/other.txt")
+    expect-equals content (file.read-contents "subdir4/file.txt")
+    expect-equals other-content (file.read-contents "subdir4/nested-subdir/other.txt")
 
 test-permissions:
   file-permission0/int := ?
@@ -73,7 +73,7 @@ test-permissions:
 
   with-tmp-dir: | tmp-dir |
     file1 := "$tmp-dir/file1.txt"
-    file.write-content --path=file1 "foobar"
+    file.write-contents --path=file1 "foobar"
 
     file.chmod file1 file-permission0
     file.copy --source=file1 --target="$tmp-dir/file2.txt"
@@ -87,12 +87,12 @@ test-permissions:
     directory.mkdir dir
 
     file-in-dir := "$tmp-dir/dir/file.txt"
-    file.write-content --path=file-in-dir "gee"
+    file.write-contents --path=file-in-dir "gee"
 
     file.chmod dir dir-permission
     file.copy --source=dir --target="$tmp-dir/dir2" --recursive
     expect-equals dir-permission (file.stat "$tmp-dir/dir2")[file.ST-MODE]
-    expect-equals "gee".to-byte-array (file.read-content "$tmp-dir/dir2/file.txt")
+    expect-equals "gee".to-byte-array (file.read-contents "$tmp-dir/dir2/file.txt")
 
     // Note that the directory doesn't allow writing.
     // This means that the copy operation must temporarily lift that restriction to copy the
@@ -100,18 +100,18 @@ test-permissions:
     file.chmod dir read-only-dir-permission
     file.copy --source=dir --target="$tmp-dir/dir3" --recursive
     expect-equals read-only-dir-permission (file.stat "$tmp-dir/dir3")[file.ST-MODE]
-    expect-equals "gee".to-byte-array (file.read-content "$tmp-dir/dir2/file.txt")
+    expect-equals "gee".to-byte-array (file.read-contents "$tmp-dir/dir2/file.txt")
 
 test-symlinks:
   with-tmp-dir: | tmp-dir |
     file-target := "$tmp-dir/file.txt"
     file-content := "foobar".to-byte-array
-    file.write-content --path=file-target file-content
+    file.write-contents --path=file-target file-content
     dir-target := "$tmp-dir/dir"
     directory.mkdir dir-target
     dir-file := "$dir-target/file.txt"
     dir-file-content := "gee".to-byte-array
-    file.write-content --path=dir-file dir-file-content
+    file.write-contents --path=dir-file dir-file-content
 
     source-dir := "$tmp-dir/source"
     directory.mkdir source-dir
@@ -125,25 +125,25 @@ test-symlinks:
 
     copy-target := "$tmp-dir/copy-target-symlink"
     file.copy --source=source-dir --target=copy-target --recursive
-    expect-equals file-content (file.read-content "$copy-target/relative-link")
-    expect-equals file-content (file.read-content "$copy-target/absolute-link")
+    expect-equals file-content (file.read-contents "$copy-target/relative-link")
+    expect-equals file-content (file.read-contents "$copy-target/absolute-link")
     // Change the original file.
     // Since the copy is still a link we expect the content to change.
     file-content2 := "foobar2".to-byte-array
-    file.write-content --path=file-target file-content2
-    expect-equals file-content2 (file.read-content "$copy-target/relative-link")
-    expect-equals file-content2 (file.read-content "$copy-target/absolute-link")
+    file.write-contents --path=file-target file-content2
+    expect-equals file-content2 (file.read-contents "$copy-target/relative-link")
+    expect-equals file-content2 (file.read-contents "$copy-target/absolute-link")
     expect (is-link "$copy-target/relative-link")
     expect (is-link "$copy-target/absolute-link")
 
-    expect-equals dir-file-content (file.read-content "$copy-target/relative-dir/file.txt")
-    expect-equals dir-file-content (file.read-content "$copy-target/absolute-dir/file.txt")
+    expect-equals dir-file-content (file.read-contents "$copy-target/relative-dir/file.txt")
+    expect-equals dir-file-content (file.read-contents "$copy-target/absolute-dir/file.txt")
     // Change the original file.
     // Since the copy is still a link we expect the content to change.
     dir-file-content2 := "gee2".to-byte-array
-    file.write-content --path=dir-file dir-file-content2
-    expect-equals dir-file-content2 (file.read-content "$copy-target/relative-dir/file.txt")
-    expect-equals dir-file-content2 (file.read-content "$copy-target/absolute-dir/file.txt")
+    file.write-contents --path=dir-file dir-file-content2
+    expect-equals dir-file-content2 (file.read-contents "$copy-target/relative-dir/file.txt")
+    expect-equals dir-file-content2 (file.read-contents "$copy-target/absolute-dir/file.txt")
     expect (is-link "$copy-target/relative-dir")
     expect (is-link "$copy-target/absolute-dir")
 
@@ -151,13 +151,13 @@ test-symlinks:
     copy-target = "$tmp-dir/copy-target-dereference"
 
     file.copy --source=source-dir --target=copy-target --recursive --dereference
-    expect-equals file-content2 (file.read-content "$copy-target/relative-link")
-    expect-equals file-content2 (file.read-content "$copy-target/absolute-link")
+    expect-equals file-content2 (file.read-contents "$copy-target/relative-link")
+    expect-equals file-content2 (file.read-contents "$copy-target/absolute-link")
     expect-not (is-link "$copy-target/relative-link")
     expect-not (is-link "$copy-target/absolute-link")
 
-    expect-equals dir-file-content2 (file.read-content "$copy-target/relative-dir/file.txt")
-    expect-equals dir-file-content2 (file.read-content "$copy-target/absolute-dir/file.txt")
+    expect-equals dir-file-content2 (file.read-contents "$copy-target/relative-dir/file.txt")
+    expect-equals dir-file-content2 (file.read-contents "$copy-target/absolute-dir/file.txt")
     expect-not (is-link "$copy-target/relative-dir")
     expect-not (is-link "$copy-target/absolute-dir")
 
@@ -168,23 +168,23 @@ test-symlinks:
     file.copy --source=source-dir --target=copy-target --recursive
 
     // Absolute links still work.
-    expect-equals file-content2 (file.read-content "$copy-target/absolute-link")
+    expect-equals file-content2 (file.read-contents "$copy-target/absolute-link")
     expect (is-link "$copy-target/absolute-link")
-    expect-equals dir-file-content2 (file.read-content "$copy-target/absolute-dir/file.txt")
+    expect-equals dir-file-content2 (file.read-contents "$copy-target/absolute-dir/file.txt")
     expect (is-link "$copy-target/absolute-dir")
 
-    expect-throws: file.read-content "$copy-target/relative-link"
+    expect-throws: file.read-contents "$copy-target/relative-link"
     expect (is-link "$copy-target/relative-link")
-    expect-throws: file.read-content "$copy-target/relative-dir/file.txt"
+    expect-throws: file.read-contents "$copy-target/relative-dir/file.txt"
     expect (is-link "$copy-target/relative-dir")
 
     // Create the target.
-    file.write-content --path="$tmp-dir/other/file.txt" file-content
+    file.write-contents --path="$tmp-dir/other/file.txt" file-content
     directory.mkdir "$tmp-dir/other/dir"
-    file.write-content --path="$tmp-dir/other/dir/file.txt" dir-file-content
+    file.write-contents --path="$tmp-dir/other/dir/file.txt" dir-file-content
     // Now the symlinks work again.
-    expect-equals file-content (file.read-content "$copy-target/relative-link")
-    expect-equals dir-file-content (file.read-content "$copy-target/relative-dir/file.txt")
+    expect-equals file-content (file.read-contents "$copy-target/relative-link")
+    expect-equals dir-file-content (file.read-contents "$copy-target/relative-dir/file.txt")
 
 is-link path/string -> bool:
   stat := file.stat path --no-follow-links
