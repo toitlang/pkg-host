@@ -14,7 +14,7 @@ main:
   expect (file.is-directory tmp-dir)
 
   directory.chdir tmp-dir
-  file.write-content "asdsd" --path="test"
+  file.write-contents "asdsd" --path="test"
   try:
     if system.platform == system.PLATFORM-WINDOWS:
       file.chmod "test" file.WINDOWS-FILE-ATTRIBUTE-READONLY

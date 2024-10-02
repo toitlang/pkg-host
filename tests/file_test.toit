@@ -70,9 +70,9 @@ main:
         test-out.out.close
 
         10000.repeat:
-          file.read-content filename
+          file.read-contents filename
 
-        read-back := (file.read-content filename).to-string
+        read-back := (file.read-contents filename).to-string
 
         expect-equals test-contents read-back
 
@@ -86,7 +86,7 @@ main:
         test-out.out.close
         expect-equals
           ByteArray 0
-          file.read-content filename
+          file.read-contents filename
       finally:
         file.delete filename
 
@@ -100,7 +100,7 @@ main:
         test-out.out.write test-contents from to
         test-out.out.close
 
-        read-back := (file.read-content filename).to-string
+        read-back := (file.read-contents filename).to-string
 
         expect-equals (test-contents.copy from to) read-back
 
@@ -112,8 +112,8 @@ main:
       expect (not file.size filename)
 
       try:
-        file.write-content test-contents --path=filename
-        read-back := (file.read-content filename).to-string
+        file.write-contents test-contents --path=filename
+        read-back := (file.read-contents filename).to-string
         expect-equals test-contents read-back
       finally:
         file.delete filename
@@ -123,8 +123,8 @@ main:
       // Permissions does not quite work on windows
       if platform != PLATFORM-WINDOWS:
         try:
-          file.write-content test-contents --path=filename --permissions=(6 << 6)
-          read-back := (file.read-content filename).to-string
+          file.write-contents test-contents --path=filename --permissions=(6 << 6)
+          read-back := (file.read-contents filename).to-string
           expect-equals test-contents read-back
           stats := file.stat filename
           // We can't require that the permissions are exactly the same (as the umask

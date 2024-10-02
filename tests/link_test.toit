@@ -16,8 +16,8 @@ main:
   expect (file.is-directory tmp-dir)
 
   directory.chdir tmp-dir
-  file.write-content CONTENT --path="test-file"
-  expect-equals CONTENT.to-byte-array (file.read-content "test-file")
+  file.write-contents CONTENT --path="test-file"
+  expect-equals CONTENT.to-byte-array (file.read-contents "test-file")
   directory.mkdir "test-dir"
 
   try:
@@ -39,8 +39,8 @@ main:
     expect-equals dir-stat (file.stat "test-dir-soft-link")
     expect-not-equals dir-stat (file.stat --follow-links=false "test-dir-soft-link")
 
-    expect-equals CONTENT.to-byte-array (file.read-content "test-file-hard-link")
-    expect-equals CONTENT.to-byte-array (file.read-content "test-file-soft-link")
+    expect-equals CONTENT.to-byte-array (file.read-contents "test-file-hard-link")
+    expect-equals CONTENT.to-byte-array (file.read-contents "test-file-soft-link")
 
     // Test that we can't auto detect link type if the target does not exist.
     expect-throw "TARGET_NOT_FOUND": file.link --source="test-file" --target="test-file-that-does-not-exist"
@@ -53,33 +53,33 @@ main:
     expect-equals "relative-soft-name" (file.readlink "test-dir/relative")
     file.link --file --source="test-dir/relative-soft-name" --target="..$(directory.SEPARATOR)test-file"
     expect-equals "..$(directory.SEPARATOR)test-file" (file.readlink "test-dir/relative-soft-name")
-    expect-equals CONTENT.to-byte-array (file.read-content "test-dir/relative")
+    expect-equals CONTENT.to-byte-array (file.read-contents "test-dir/relative")
 
     // Test that hardlinks are always relative to cwd.
     file.link --hard --source="test-dir/relative-hard" --target="test-file"
-    expect-equals CONTENT.to-byte-array (file.read-content "test-dir/relative-hard")
+    expect-equals CONTENT.to-byte-array (file.read-contents "test-dir/relative-hard")
 
     // Test that hard-links behaves as hard-link and soft-link behaves as soft-links.
     file.delete "test-file"
-    expect-equals CONTENT.to-byte-array (file.read-content "test-file-hard-link")
-    expect-throw "FILE_NOT_FOUND: \"test-file-soft-link\"" : file.read-content "test-file-soft-link"
+    expect-equals CONTENT.to-byte-array (file.read-contents "test-file-hard-link")
+    expect-throw "FILE_NOT_FOUND: \"test-file-soft-link\"" : file.read-contents "test-file-soft-link"
 
     new-content := "new-content".to-byte-array
-    file.write-content new-content --path="test-file"
+    file.write-contents new-content --path="test-file"
 
     // Test relative links that isn't relative to the current directory.
     subdir := "$tmp-dir/subdir"
     directory.mkdir subdir
     file.link --file --source="$subdir/relative-link" --target="../test-file"
-    expect-equals new-content (file.read-content "$subdir/relative-link")
+    expect-equals new-content (file.read-contents "$subdir/relative-link")
     file.link --source="$subdir/relative-link2" --target="../test-file"
-    expect-equals new-content (file.read-content "$subdir/relative-link2")
+    expect-equals new-content (file.read-contents "$subdir/relative-link2")
 
     // Same for directories.
     file.link --directory --source="$subdir/relative-dir-link" --target=".."
-    expect-equals new-content (file.read-content "$subdir/relative-dir-link/test-file")
+    expect-equals new-content (file.read-contents "$subdir/relative-dir-link/test-file")
     file.link --source="$subdir/relative-dir-link2" --target=".."
-    expect-equals new-content (file.read-content "$subdir/relative-dir-link2/test-file")
+    expect-equals new-content (file.read-contents "$subdir/relative-dir-link2/test-file")
 
   finally:
     directory.rmdir tmp-dir --recursive
