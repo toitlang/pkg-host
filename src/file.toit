@@ -165,7 +165,7 @@ class Stream extends Object with io.CloseableInMixin io.CloseableOutMixin implem
 Use $read-contents instead.
 */
 read-content name:
-  return read-content name
+  return read-contents name
 
 /**
 Reads the content of a file.
