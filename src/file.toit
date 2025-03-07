@@ -162,7 +162,7 @@ class Stream extends Object with io.CloseableInMixin io.CloseableOutMixin implem
 
 
 /**
-Use $read-contents instead.
+Deprecated. Use $read-contents instead.
 */
 read-content name:
   return read-contents name
@@ -196,7 +196,7 @@ read-contents file-name/string -> ByteArray:
   finally:
     file.close
 
-/** Use $write-contents instead. */
+/** Deprecated. Use $write-contents instead. */
 write-content content/io.Data --path/string --permissions/int?=null -> none:
   write-contents content --path=path --permissions=permissions
 
