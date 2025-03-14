@@ -29,8 +29,18 @@ UNKNOWN-DIRECTION_ ::= 0
 PARENT-TO-CHILD_ ::= 1
 CHILD-TO-PARENT_ ::= 2
 
+interface StreamOrPipe implements old-reader.Reader:
+  in -> io.CloseableReader
+  out -> io.CloseableWriter
 
-get-standard-pipe_ fd/int:
+  /** Deprecated. Use 'read' on $in instead. */
+  read -> ByteArray?
+  /**
+  Deprecated. Use 'write' or 'try-write' on $out instead.
+  */
+  write x from = 0 to = x.size
+
+get-standard-pipe_ fd/int -> StreamOrPipe:
   if not standard-pipes_[fd]:
     if file.is-open-file_ fd:
       standard-pipes_[fd] = file.Stream.internal_ fd  // TODO: This is a private constructor.
@@ -45,7 +55,7 @@ A program may be executed with an open file descriptor.  This is similar
   the file descriptor this function will return a $old-reader.Reader or writer
   object.  You are expected to know which direction the file descriptor has.
 */
-get-numbered-pipe fd/int:
+get-numbered-pipe fd/int -> StreamOrPipe:
   if fd < 0: throw "OUT_OF_RANGE"
   if fd <= 2: throw "Use stdin, stdout, stderr"
   if file.is-open-file_ fd:
@@ -75,7 +85,7 @@ class OpenPipeWriter extends io.CloseableWriter:
   close_ -> none:
     pipe_.close
 
-class OpenPipe implements old-reader.Reader:
+class OpenPipe implements old-reader.Reader StreamOrPipe:
   resource_ := ?
   state_ := ?
   pid := null
@@ -493,13 +503,13 @@ run-program --environment/Map?=null arguments -> int:
         signal-to-string signal
   return exit-code exit-value
 
-stdin:
+stdin -> StreamOrPipe:
   return get-standard-pipe_ 0
 
-stdout:
+stdout -> StreamOrPipe:
   return get-standard-pipe_ 1
 
-stderr:
+stderr -> StreamOrPipe:
   return get-standard-pipe_ 2
 
 print-to-stdout message/string -> none:

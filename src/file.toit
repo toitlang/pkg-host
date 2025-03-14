@@ -7,6 +7,7 @@ import io
 
 import system
 import .directory
+import .pipe show StreamOrPipe
 
 // Manipulation of files on a filesystem.
 // Names work best when imported without "show *".
@@ -67,7 +68,10 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream extends Object with io.CloseableInMixin io.CloseableOutMixin implements old-reader.Reader:
+class Stream
+    extends Object
+    with io.CloseableInMixin io.CloseableOutMixin
+    implements old-reader.Reader StreamOrPipe:
   fd_ := ?
 
   constructor.internal_ .fd_:
