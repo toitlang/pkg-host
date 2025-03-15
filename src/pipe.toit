@@ -32,6 +32,7 @@ CHILD-TO-PARENT_ ::= 2
 interface StreamOrPipe implements old-reader.Reader:
   in -> io.CloseableReader
   out -> io.CloseableWriter
+  close -> none
 
   /** Deprecated. Use 'read' on $in instead. */
   read -> ByteArray?
