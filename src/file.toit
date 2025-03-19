@@ -71,7 +71,7 @@ An open file with a current position.  Corresponds in many ways to a file
 class Stream
     extends Object
     with io.CloseableInMixin io.CloseableOutMixin
-    implements old-reader.Reader StreamOrPipe:
+    implements StreamOrPipe:
   fd_ := ?
 
   constructor.internal_ .fd_:

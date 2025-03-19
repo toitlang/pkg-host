@@ -41,6 +41,8 @@ interface StreamOrPipe implements old-reader.Reader:
   */
   write x from = 0 to = x.size
 
+  is-a-terminal -> bool
+
 get-standard-pipe_ fd/int -> StreamOrPipe:
   if not standard-pipes_[fd]:
     if file.is-open-file_ fd:
@@ -86,7 +88,7 @@ class OpenPipeWriter extends io.CloseableWriter:
   close_ -> none:
     pipe_.close
 
-class OpenPipe implements old-reader.Reader StreamOrPipe:
+class OpenPipe implements StreamOrPipe:
   resource_ := ?
   state_ := ?
   pid := null

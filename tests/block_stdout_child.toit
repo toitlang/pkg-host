@@ -9,16 +9,15 @@ import host.pipe
 main args:
   closing-test := args[0] == "close"
   stderr := pipe.stderr
-  in := pipe.stdin
-  out := pipe.stdout
+  stdout := pipe.stdout
 
   counter := 0
   task::
     // Repeat enough that this pipe will block until the parent reads
     // from stdout.
     1000.repeat:
-      out.out.write "In the beginning the Universe was created.\n"
-      out.out.write "This has made a lot of people very angry and been widely regarded as a bad move.\n"
+      stdout.out.write "In the beginning the Universe was created.\n"
+      stdout.out.write "This has made a lot of people very angry and been widely regarded as a bad move.\n"
       counter++
     if not closing-test:
       stderr.out.write "Done with stdout."
