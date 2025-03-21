@@ -7,9 +7,9 @@ import host.pipe
 
 main args:
   closing-test := args[0] == "close"
-  in := pipe.stdin
-  out := pipe.stdout
-  err := pipe.stderr
+  in := pipe.stdin.in
+  out := pipe.stdout.out
+  err := pipe.stderr.out
 
   err.write "hello\n"
 
