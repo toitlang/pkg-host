@@ -7,7 +7,9 @@ import io
 
 import system
 import .directory
-import .pipe show StreamOrPipe
+import .stream
+
+export Stream
 
 // Manipulation of files on a filesystem.
 // Names work best when imported without "show *".
@@ -68,10 +70,10 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream
+class Stream_
     extends Object
     with io.CloseableInMixin io.CloseableOutMixin
-    implements StreamOrPipe:
+    implements Stream:
   fd_ := ?
 
   constructor.internal_ .fd_:
@@ -80,7 +82,7 @@ class Stream
   Opens the file at $path for reading.
   */
   constructor.for-read path/string:
-    return Stream path RDONLY 0
+    return Stream_ path RDONLY 0
 
   /**
   Opens the file at $path for writing.
@@ -92,7 +94,7 @@ class Stream
   Ignored if the file already exists.
   */
   constructor.for-write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
-    return Stream path (WRONLY | TRUNC | CREAT) permissions
+    return Stream_ path (WRONLY | TRUNC | CREAT) permissions
 
   /**
   Opens the file at $path with the given $flags.
@@ -104,7 +106,7 @@ class Stream
     if (flags & CREAT) != 0:
       // Two argument version with no permissions can't create new files.
       throw "INVALID_ARGUMENT"
-    return Stream path flags 0
+    return Stream_ path flags 0
 
   /**
   Creates a stream for a file.
@@ -126,7 +128,7 @@ class Stream
       if error is string:
         throw "$error: \"$path\""
       throw error
-    return Stream.internal_ fd
+    return Stream_.internal_ fd
 
   /**
   Reads some data from the file, returning a byte array.

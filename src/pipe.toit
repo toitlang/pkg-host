@@ -8,6 +8,8 @@ import monitor
 import reader as old-reader
 import system as sdk-system
 
+import .stream
+
 process-resource-group_ ::= process-init_
 pipe-resource-group_ ::= pipe-init_
 standard-pipes_ ::= [ null, null, null ]
@@ -29,24 +31,10 @@ UNKNOWN-DIRECTION_ ::= 0
 PARENT-TO-CHILD_ ::= 1
 CHILD-TO-PARENT_ ::= 2
 
-interface StreamOrPipe implements old-reader.Reader:
-  in -> io.CloseableReader
-  out -> io.CloseableWriter
-  close -> none
-
-  /** Deprecated. Use 'read' on $in instead. */
-  read -> ByteArray?
-  /**
-  Deprecated. Use 'write' or 'try-write' on $out instead.
-  */
-  write x from = 0 to = x.size
-
-  is-a-terminal -> bool
-
-get-standard-pipe_ fd/int -> StreamOrPipe:
+get-standard-pipe_ fd/int -> Stream:
   if not standard-pipes_[fd]:
     if file.is-open-file_ fd:
-      standard-pipes_[fd] = file.Stream.internal_ fd  // TODO: This is a private constructor.
+      standard-pipes_[fd] = file.Stream_.internal_ fd  // TODO: This is a private constructor.
     else:
       standard-pipes_[fd] = OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
   return standard-pipes_[fd]
@@ -58,11 +46,11 @@ A program may be executed with an open file descriptor.  This is similar
   the file descriptor this function will return a $old-reader.Reader or writer
   object.  You are expected to know which direction the file descriptor has.
 */
-get-numbered-pipe fd/int -> StreamOrPipe:
+get-numbered-pipe fd/int -> Stream:
   if fd < 0: throw "OUT_OF_RANGE"
   if fd <= 2: throw "Use stdin, stdout, stderr"
   if file.is-open-file_ fd:
-    return file.Stream.internal_ fd  // TODO: This is a private constructor.
+    return file.Stream_.internal_ fd  // TODO: This is a private constructor.
   else:
     return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
@@ -88,7 +76,7 @@ class OpenPipeWriter extends io.CloseableWriter:
   close_ -> none:
     pipe_.close
 
-class OpenPipe implements StreamOrPipe:
+class OpenPipe implements Stream:
   resource_ := ?
   state_ := ?
   pid := null
@@ -506,13 +494,13 @@ run-program --environment/Map?=null arguments -> int:
         signal-to-string signal
   return exit-code exit-value
 
-stdin -> StreamOrPipe:
+stdin -> Stream:
   return get-standard-pipe_ 0
 
-stdout -> StreamOrPipe:
+stdout -> Stream:
   return get-standard-pipe_ 1
 
-stderr -> StreamOrPipe:
+stderr -> Stream:
   return get-standard-pipe_ 2
 
 print-to-stdout message/string -> none:
