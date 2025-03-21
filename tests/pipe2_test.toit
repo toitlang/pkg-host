@@ -13,21 +13,18 @@ import system show platform PLATFORM-FREERTOS
 
 test-exit-value command args expected-exit-value sleep-time/int:
   complete-args := [command] + args
-  pipes := pipe.fork
-    true  // use_path
-    pipe.PIPE-CREATED  // stdin
-    pipe.PIPE-CREATED  // stdiout
-    pipe.PIPE-CREATED  // stderr
-    command
-    complete-args
-
-  pid := pipes[3]
+  process := pipe.fork
+      --create-stdin
+      --create-stdout
+      --create-stderr
+      command
+      complete-args
 
   task::
     if sleep-time != 0: sleep --ms=sleep-time
-    pipes[0].close
+    process.stdin.close
 
-  exit-value := pipe.wait-for pid
+  exit-value := process.wait
 
   expect-equals expected-exit-value (pipe.exit-code exit-value)
   expect-equals null (pipe.exit-signal exit-value)
@@ -35,22 +32,19 @@ test-exit-value command args expected-exit-value sleep-time/int:
 
 test-exit-signal sleep-time/int:
   // Start long running process.
-  pipes := pipe.fork
-    true  // use_path
-    pipe.PIPE-CREATED  // stdin
-    pipe.PIPE-CREATED  // stdiout
-    pipe.PIPE-CREATED  // stderr
-    "cat"
-    ["cat"]
-
-  pid := pipes[3]
+  process := pipe.fork
+      --create-stdin
+      --create-stdout
+      --create-stderr
+      "cat"
+      ["cat"]
 
   SIGKILL := 9
   task::
     if sleep-time != 0: sleep --ms=sleep-time
-    pipe.kill_ pid SIGKILL
+    pipe.kill_ process.pid SIGKILL
 
-  exit-value := pipe.wait-for pid
+  exit-value := process.wait
 
   expect-equals null (pipe.exit-code exit-value)
   expect-equals SIGKILL (pipe.exit-signal exit-value)
