@@ -6,7 +6,6 @@ import expect show *
 import host.pipe
 import io
 import monitor
-import semver
 
 class Stress:
   executable ::= ?
@@ -15,19 +14,15 @@ class Stress:
 
   run-compiler id channel:
     channel.send "$id: started"
-    pipes := pipe.fork
-        true                // use_path
-        pipe.PIPE-CREATED   // stdin
-        pipe.PIPE-CREATED   // stdout
-        pipe.PIPE-INHERITED // stderr
+    process := pipe.fork
+        --create-stdin
+        --create-stdout
         executable
-        [
-          executable,
-        ]
-    to/pipe.OpenPipe   := pipes[0]
-    from/pipe.OpenPipe := pipes[1]
-    pid  := pipes[3]
-    pipe.dont-wait-for pid
+        [executable]
+
+    to/pipe.Stream   := process.stdin
+    from/pipe.Stream := process.stdout
+    process.dont-wait
     channel.send "$id: forked"
 
     pipe-writer := to.out

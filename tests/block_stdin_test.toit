@@ -33,28 +33,26 @@ main args:
 
   ["close", "read"].do: | action |
     subprocess := pipe.fork
-      true  // use_path
-      pipe.PIPE-CREATED   // stdin
-      pipe.PIPE-CREATED   // stdout
-      pipe.PIPE-INHERITED // stderr
-      toit-exe
-      [toit-exe, "tests/block_stdin_child.toit", action]
+        --create-stdin
+        --create-stdout
+        toit-exe
+        [toit-exe, "tests/block_stdin_child.toit", action]
 
     print "Started subprocess"
 
-    subprocess-stdin  := subprocess[0]
-    subprocess-stdout := subprocess[1]
-    pid := subprocess[3]
+    subprocess-stdin  := subprocess.stdin
+    subprocess-stdout := subprocess.stdout
+    pid := subprocess.pid
 
-    line := subprocess-stdout.read
+    line := subprocess-stdout.in.read
     expect-equals "Message through stdout." line.to-string
     print "$line.to-string"
     if action == "read":
-      subprocess-stdin.write "There is an art to flying, or rather a knack.\n"
+      subprocess-stdin.out.write "There is an art to flying, or rather a knack.\n"
     else:
       subprocess-stdin.close
 
-    exit-value := pipe.wait-for pid
+    exit-value := subprocess.wait
     expect-equals 0
       pipe.exit-code exit-value
     expect-equals null

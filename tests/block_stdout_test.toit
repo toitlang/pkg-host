@@ -31,20 +31,17 @@ main args:
 
   ["close", "write"].do: | action |
     subprocess := pipe.fork
-      true  // use_path
-      pipe.PIPE-INHERITED // stdin
-      pipe.PIPE-CREATED   // stdout
-      pipe.PIPE-CREATED   // stderr
-      toit-exe
-      [toit-exe, "tests/block_stdout_child.toit", action]
+        --create-stdout
+        --create-stderr
+        toit-exe
+        [toit-exe, "tests/block_stdout_child.toit", action]
 
-    subprocess-stdout := subprocess[1]
-    subprocess-stderr := subprocess[2]
-    pid := subprocess[3]
+    subprocess-stdout := subprocess.stdout
+    subprocess-stderr := subprocess.stderr
 
     // Get the stderr first even though the subproces is blocking on stdout.
     print "Waiting for read of child stderr."
-    line := subprocess-stderr.read
+    line := subprocess-stderr.in.read
     // If this gets the wrong message then the buffer on stdout is too big and
     // we need to increase the size of the loop in block_stdout_child.toit.
     if action == "close":
@@ -55,14 +52,14 @@ main args:
       expect-equals "Message through stderr." line.to-string
       print "$line.to-string"
     task::
-      while read := subprocess-stdout.read:
+      while read := subprocess-stdout.in.read:
         null
     if action != "close":
-      line = subprocess-stderr.read
+      line = subprocess-stderr.in.read
       expect-equals "Done with stdout." line.to-string
       print "$line.to-string"
 
-    exit-value := pipe.wait-for pid
+    exit-value := subprocess.wait
     expect-equals 0
       pipe.exit-code exit-value
     expect-equals null

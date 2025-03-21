@@ -37,16 +37,17 @@ low-level-test toit-exe:
   // at the moment.  There was an implementation in
   // https://github.com/toitlang/toit/pull/1400, but it fails to find
   // executables without the explicit ".exe" extension, so it was annoying.
-  INHERIT ::= pipe.PIPE-INHERITED
-  output := pipe.OpenPipe false
-  stdout := output.fd
-  array := pipe.fork true INHERIT stdout INHERIT toit-exe ["ignored-0-argument", "tests/echo.toit", "horse"]
+  process := pipe.fork
+      --create-stdout
+      toit-exe
+      ["ignored-0-argument", "tests/echo.toit", "horse"]
+  stdout := process.stdout
   expect-equals
     "horse"
-    output.in.read.to-string.trim
+    stdout.in.read.to-string.trim
   expect-equals
     null
-    output.in.read
+    stdout.in.read
 
 main args:
   if args.size < 1:

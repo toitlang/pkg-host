@@ -21,16 +21,14 @@ main args:
 
   run-crash := : | signal/int? |
     signal-arg := signal ? ["$signal"] : []
-    pipes := pipe.fork
-      true  // use_path
-      pipe.PIPE-CREATED  // stdin
-      pipe.PIPE-CREATED  // stdout
-      pipe.PIPE-CREATED  // stderr
+    process := pipe.fork
+      --create-stdin
+      --create-stdout
+      --create-stderr
       crash-exe
       [crash-exe] + signal-arg
 
-    pid := pipes[3]
-    pipe.wait-for pid
+    process.wait
 
   signals-to-test := [
     4, // SIGILL
