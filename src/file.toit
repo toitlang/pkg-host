@@ -70,7 +70,7 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream_
+class OpenFile_
     extends Object
     with io.CloseableInMixin io.CloseableOutMixin
     implements Stream:

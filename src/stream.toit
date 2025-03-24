@@ -33,7 +33,7 @@ interface Stream implements old-reader.Reader:
   Opens the file at $path for reading.
   */
   constructor.for-read path/string:
-    return file-lib.Stream_ path RDONLY 0
+    return file-lib.OpenFile_ path RDONLY 0
 
   /**
   Opens the file at $path for writing.
@@ -45,7 +45,7 @@ interface Stream implements old-reader.Reader:
   Ignored if the file already exists.
   */
   constructor.for-write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
-    return file-lib.Stream_ path (WRONLY | TRUNC | CREAT) permissions
+    return file-lib.OpenFile_ path (WRONLY | TRUNC | CREAT) permissions
 
   /**
   Opens the file at $path with the given $flags.
@@ -57,7 +57,7 @@ interface Stream implements old-reader.Reader:
     if (flags & CREAT) != 0:
       // Two argument version with no permissions can't create new files.
       throw "INVALID_ARGUMENT"
-    return file-lib.Stream_ path flags 0
+    return file-lib.OpenFile_ path flags 0
 
   /**
   Creates a stream for a file.
@@ -72,7 +72,7 @@ interface Stream implements old-reader.Reader:
   */
   // Returns an open file.  Only for use on actual files, not pipes, devices, etc.
   constructor path/string flags/int permissions/int:
-    return file-lib.Stream_ path flags permissions
+    return file-lib.OpenFile_ path flags permissions
 
   /**
   Constructs a pipe to send data to a child process.

@@ -36,7 +36,7 @@ CHILD-TO-PARENT_ ::= 2
 get-standard-pipe_ fd/int -> Stream:
   if not standard-pipes_[fd]:
     if file.is-open-file_ fd:
-      standard-pipes_[fd] = file.Stream_.internal_ fd  // TODO: This is a private constructor.
+      standard-pipes_[fd] = file.OpenFile_.internal_ fd
     else:
       standard-pipes_[fd] = OpenPipe_.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
   return standard-pipes_[fd]
@@ -52,7 +52,7 @@ get-numbered-pipe fd/int -> Stream:
   if fd < 0: throw "OUT_OF_RANGE"
   if fd <= 2: throw "Use stdin, stdout, stderr"
   if file.is-open-file_ fd:
-    return file.Stream_.internal_ fd  // TODO: This is a private constructor.
+    return file.OpenFile_.internal_ fd
   else:
     return OpenPipe_.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
@@ -188,7 +188,7 @@ check-exit_ pid child-process-name/string? -> none:
   if child-process-name == null:
     child-process-name = "child process"
   if pid:
-    exit-value := wait-for pid
+    exit-value := Process.wait_ pid
     if (exit-value & PROCESS-SIGNALLED_) != 0:
       // Process crashed.
       throw
@@ -280,13 +280,20 @@ class Process:
   Use $exit-signal and $exit-code to decode the exit value.
   */
   wait -> int:
-    return wait-for pid
+    return wait_ pid
+
+  static wait_ child-process -> int:
+    wait-for_ child-process
+    state := monitor.ResourceState_ process-resource-group_ child-process
+    exit-value := state.wait
+    state.dispose
+    return exit-value
 
   /**
   Tells the system that we don't want to wait for the child process to finish.
   */
-  dont-wait -> none:
-    dont-wait-for pid
+  wait-ignore -> none:
+    dont-wait-for_ pid
 
 /**
 Forks a process.
@@ -301,8 +308,7 @@ Alternatively, a pipe can be created using the $create-stdin,
 The $stdin and $create-stdin (respectively $stdout and $create-stdout,
   $stderr and $create-stderr) arguments are mutually exclusive.
 
-To avoid zombies you must either give the child process to either
-  $Process.dont_wait or $Process.wait.
+To avoid zombies you must either cal $Process.wait-ignore or $Process.wait.
 
 The $file-descriptor-3 and $file-descriptor-4 can be used to pass streams as
   open file descriptors 3 and/or 4 to the child process.
@@ -557,13 +563,17 @@ Returns the exit value of the process which can then be decoded into
   exit code or signal number.
 
 See $exit-code and $exit-signal.
+
+Deprecated. Use $Process.wait instead.
 */
 wait-for child-process:
-  wait-for_ child-process
-  state := monitor.ResourceState_ process-resource-group_ child-process
-  exit-value := state.wait
-  state.dispose
-  return exit-value
+  return Process.wait_ child-process
+
+/**
+Deprecated. Use $Process.wait-ignore instead.
+*/
+dont-wait-for subprocess -> none:
+  dont-wait-for_ subprocess
 
 /**
 Forks a program, and returns the exit status.
@@ -614,7 +624,7 @@ run-program --environment/Map?=null arguments -> int:
     arguments = [arguments]
   pipes := fork_ --environment=environment true PIPE-INHERITED PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
-  exit-value := wait-for child-process
+  exit-value := Process.wait_ child-process
   signal := exit-signal exit-value
   if signal:
     throw
@@ -681,7 +691,7 @@ fd-to-pipe_ resource-group fd:
 process-init_:
   #primitive.subprocess.init
 
-dont-wait-for subprocess -> none:
+dont-wait-for_ subprocess -> none:
   #primitive.subprocess.dont-wait-for
 
 wait-for_ subprocess -> none:

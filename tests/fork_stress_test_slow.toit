@@ -22,7 +22,7 @@ class Stress:
 
     to/pipe.Stream   := process.stdin
     from/pipe.Stream := process.stdout
-    process.dont-wait
+    process.wait-ignore
     channel.send "$id: forked"
 
     pipe-writer := to.out
