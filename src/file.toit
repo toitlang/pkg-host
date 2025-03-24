@@ -70,43 +70,13 @@ DIRECTORY-SYMBOLIC-LINK ::= 7
 An open file with a current position.  Corresponds in many ways to a file
   descriptor in Posix.
 */
-class Stream_
+class OpenFile_
     extends Object
     with io.CloseableInMixin io.CloseableOutMixin
     implements Stream:
   fd_ := ?
 
   constructor.internal_ .fd_:
-
-  /**
-  Opens the file at $path for reading.
-  */
-  constructor.for-read path/string:
-    return Stream_ path RDONLY 0
-
-  /**
-  Opens the file at $path for writing.
-
-  If the file does not exist, it is created.  If it exists, it is truncated.
-  Uses the given $permissions, modified by the current umask, to set the
-    permissions of the file.
-
-  Ignored if the file already exists.
-  */
-  constructor.for-write path/string --permissions/int=((6 << 6) | (6 << 3) | 6):
-    return Stream_ path (WRONLY | TRUNC | CREAT) permissions
-
-  /**
-  Opens the file at $path with the given $flags.
-
-  The $flags parameter is a bitwise-or of the flags defined in this package,
-    such as $RDONLY, $WRONLY, $RDWR, $APPEND, $CREAT, and $TRUNC.
-  */
-  constructor path/string flags/int:
-    if (flags & CREAT) != 0:
-      // Two argument version with no permissions can't create new files.
-      throw "INVALID_ARGUMENT"
-    return Stream_ path flags 0
 
   /**
   Creates a stream for a file.
@@ -119,7 +89,6 @@ class Stream_
   The $permissions parameter is the permissions to use when creating the file,
     modified by the current umask. Ignored if the file already exists.
   */
-  // Returns an open file.  Only for use on actual files, not pipes, devices, etc.
   constructor path/string flags/int permissions/int:
     fd := null
     error := catch:
@@ -128,7 +97,10 @@ class Stream_
       if error is string:
         throw "$error: \"$path\""
       throw error
-    return Stream_.internal_ fd
+    fd_ = fd
+
+  /** Deprecated. */
+  fd -> any: return fd_
 
   /**
   Reads some data from the file, returning a byte array.
@@ -162,6 +134,7 @@ class Stream_
 
   close -> none:
     close_ fd_
+    fd_ = null
 
   is-a-terminal -> bool:
     return false

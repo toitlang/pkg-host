@@ -10,6 +10,8 @@ import system as sdk-system
 
 import .stream
 
+export Stream
+
 process-resource-group_ ::= process-init_
 pipe-resource-group_ ::= pipe-init_
 standard-pipes_ ::= [ null, null, null ]
@@ -34,9 +36,9 @@ CHILD-TO-PARENT_ ::= 2
 get-standard-pipe_ fd/int -> Stream:
   if not standard-pipes_[fd]:
     if file.is-open-file_ fd:
-      standard-pipes_[fd] = file.Stream_.internal_ fd  // TODO: This is a private constructor.
+      standard-pipes_[fd] = file.OpenFile_.internal_ fd
     else:
-      standard-pipes_[fd] = OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
+      standard-pipes_[fd] = OpenPipe_.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
   return standard-pipes_[fd]
 
 /**
@@ -50,12 +52,12 @@ get-numbered-pipe fd/int -> Stream:
   if fd < 0: throw "OUT_OF_RANGE"
   if fd <= 2: throw "Use stdin, stdout, stderr"
   if file.is-open-file_ fd:
-    return file.Stream_.internal_ fd  // TODO: This is a private constructor.
+    return file.OpenFile_.internal_ fd
   else:
-    return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
+    return OpenPipe_.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
 
 class OpenPipeReader_ extends io.CloseableReader:
-  pipe_/OpenPipe
+  pipe_/OpenPipe_
 
   constructor .pipe_:
 
@@ -65,8 +67,15 @@ class OpenPipeReader_ extends io.CloseableReader:
   close_ -> none:
     pipe_.close
 
-class OpenPipeWriter extends io.CloseableWriter:
-  pipe_/OpenPipe
+/**
+Deprecated. This class was never supposed to be public.
+*/
+class OpenPipeWriter extends OpenPipeWriter_:
+  constructor pipe:
+    super pipe
+
+class OpenPipeWriter_ extends io.CloseableWriter:
+  pipe_/OpenPipe_
 
   constructor .pipe_:
 
@@ -76,16 +85,24 @@ class OpenPipeWriter extends io.CloseableWriter:
   close_ -> none:
     pipe_.close
 
-class OpenPipe implements Stream:
+/**
+Deprecated. Use $(Stream.constructor --parent-to-child) or
+  $(Stream.constructor --child-to-parent) to construct pipes.
+*/
+class OpenPipe extends OpenPipe_:
+  constructor input/bool --child-process-name="child process":
+    super input --child-process-name=child-process-name
+
+class OpenPipe_ implements Stream:
   resource_ := ?
   state_ := ?
   pid := null
   child-process-name_ /string?
   input_ /int := UNKNOWN-DIRECTION_
 
-  fd := -1  // Other end of descriptor, for child process.
+  fd_/any  // Other end of descriptor, for child process.
   in_ /OpenPipeReader_? := null
-  out_ /OpenPipeWriter? := null
+  out_ /OpenPipeWriter_? := null
 
   constructor input/bool --child-process-name="child process":
     group := pipe-resource-group_
@@ -93,11 +110,11 @@ class OpenPipe implements Stream:
     input_ = input ? PARENT-TO-CHILD_ : CHILD-TO-PARENT_
     child-process-name_ = child-process-name
     resource_ = pipe-pair[0]
-    fd = pipe-pair[1]
+    fd_ = pipe-pair[1]
     state_ = monitor.ResourceState_ pipe-resource-group_ resource_
     if input:
       in_ = null
-      out_ = OpenPipeWriter this
+      out_ = OpenPipeWriter_ this
     else:
       in_ = OpenPipeReader_ this
       out_ = null
@@ -106,8 +123,13 @@ class OpenPipe implements Stream:
     group := pipe-resource-group_
     child-process-name_ = null
     state_ = monitor.ResourceState_ pipe-resource-group_ resource_
+    fd_ = -1
     in_ = OpenPipeReader_ this
-    out_ = OpenPipeWriter this
+    out_ = OpenPipeWriter_ this
+
+  /** Deprecated. */
+  fd -> any:
+    return fd_
 
   in -> io.CloseableReader:
     if not in_:
@@ -166,7 +188,7 @@ check-exit_ pid child-process-name/string? -> none:
   if child-process-name == null:
     child-process-name = "child process"
   if pid:
-    exit-value := wait-for pid
+    exit-value := Process.wait_ pid
     if (exit-value & PROCESS-SIGNALLED_) != 0:
       // Process crashed.
       throw
@@ -208,33 +230,139 @@ PIPE-INHERITED ::= -1
 /// Create new pipe and return it.
 PIPE-CREATED ::= -2
 
-create-pipe-helper_ input-flag index result:
-  pipe-ends := OpenPipe input-flag
-  result[index] = pipe-ends
-  return pipe-ends.fd
-
 /**
 Forks a process.
-Attaches the given pipes to the stdin, stdout and stderr
-  of the new process.  Pipe arguments can be an open file descriptor from the
-  file module or a pipe resource from this pipe module or one of the PIPE_
-  constants above.
-Returns an array with [stdin, stdout, stderr, child process].
-To avoid zombies you must either give the child process to either
-  `dont_wait_for` or `wait_for`.
-Optionally you can pass pipes that should be passed to the
-  child process as open file descriptors 3 and/or 4.
-Optionally, $environment variables can be passed as a map.
-  Keys in the map should be strings, and values should be strings or null,
-  where null indicates that the variable should be unset in the child
-  process.
-Note that if you override the PATH environment variable, but set the $use-path
-  flag, the new value of PATH will be used to find the executable.
+
+Deprecated. Use $(fork command arguments) instead.
 */
 fork use-path stdin stdout stderr command arguments -> List
     --environment/Map?=null
-    --file-descriptor-3/OpenPipe?=null
-    --file-descriptor-4/OpenPipe?=null:
+    --file-descriptor-3/Stream?=null
+    --file-descriptor-4/Stream?=null:
+  return fork_ use-path stdin stdout stderr command arguments
+    --environment=environment
+    --file-descriptor-3=file-descriptor-3
+    --file-descriptor-4=file-descriptor-4
+
+/** The result of forking a process with $fork. */
+class Process:
+  fork-data_/List
+
+  constructor .fork-data_:
+
+  /** The pid of the child process. */
+  pid -> any: return fork-data_[3]
+
+  /**
+  The stdin stream.
+
+  Returns null, if the stream wasn't created during forking.
+  */
+  stdin -> Stream?: return fork-data_[0]
+
+  /**
+  The stdout stream.
+
+  Returns null, if the stream wasn't created during forking.
+  */
+  stdout -> Stream?: return fork-data_[1]
+
+  /**
+  The stderr stream.
+
+  Returns null, if the stream wasn't created during forking.
+  */
+  stderr -> Stream?: return fork-data_[2]
+
+  /**
+  Wait for the process to finish and return the exit-value.
+
+  Use $exit-signal and $exit-code to decode the exit value.
+  */
+  wait -> int:
+    return wait_ pid
+
+  static wait_ child-process -> int:
+    wait-for_ child-process
+    state := monitor.ResourceState_ process-resource-group_ child-process
+    exit-value := state.wait
+    state.dispose
+    return exit-value
+
+  /**
+  Tells the system that we don't want to wait for the child process to finish.
+  */
+  wait-ignore -> none:
+    dont-wait-for_ pid
+
+/**
+Forks a process.
+
+Attaches the given $stdin, $stdout, $stderr streams to the corresponding
+  streams of the child process. If a stream is null, then it is inherited.
+  Use $(Stream.constructor --parent-to-child) or $(Stream.constructor --child-to-parent)
+  to create a fresh pipe.
+Alternatively, a pipe can be created using the $create-stdin,
+  $create-stdout, and $create-stderr flags. In this case use $Process.stdin,
+  $Process.stdout, and $Process.stderr to access the streams.
+The $stdin and $create-stdin (respectively $stdout and $create-stdout,
+  $stderr and $create-stderr) arguments are mutually exclusive.
+
+To avoid zombies you must either cal $Process.wait-ignore or $Process.wait.
+
+The $file-descriptor-3 and $file-descriptor-4 can be used to pass streams as
+  open file descriptors 3 and/or 4 to the child process.
+
+The $environment variable, if given, must be a map where the keys are strings and
+  the values strings or null, where null indicates that the variable should be
+  unset in the child process.
+
+If you override the PATH environment variable, but set the $use-path
+  flag, the new value of PATH will be used to find the executable.
+*/
+fork command/string arguments/List -> Process
+    --use-path/bool=true
+    --environment/Map?=null
+    --stdin/Stream?=null
+    --stdout/Stream?=null
+    --stderr/Stream?=null
+    --create-stdin/bool=false
+    --create-stdout/bool=false
+    --create-stderr/bool=false
+    --file-descriptor-3/Stream?=null
+    --file-descriptor-4/Stream?=null:
+  if create-stdin and stdin: throw "ARGUMENT_ERROR"
+  if create-stdout and stdout: throw "ARGUMENT_ERROR"
+  if create-stderr and stderr: throw "ARGUMENT_ERROR"
+  stdin-arg := ?
+  if stdin: stdin-arg = stdin
+  else if create-stdin: stdin-arg = PIPE-CREATED
+  else: stdin-arg = PIPE-INHERITED
+  stdout-arg := ?
+  if stdout: stdout-arg = stdout
+  else if create-stdout: stdout-arg = PIPE-CREATED
+  else: stdout-arg = PIPE-INHERITED
+  stderr-arg := ?
+  if stderr: stderr-arg = stderr
+  else if create-stderr: stderr-arg = PIPE-CREATED
+  else: stderr-arg = PIPE-INHERITED
+  fork-data := fork_
+    use-path
+    stdin-arg
+    stdout-arg
+    stderr-arg
+    command
+    arguments
+    --environment=environment
+    --file-descriptor-3=file-descriptor-3
+    --file-descriptor-4=file-descriptor-4
+
+  return Process fork-data
+
+fork_ use-path stdin stdout stderr command arguments -> List
+    --environment/Map?=null
+    --file-descriptor-3/Stream?=null
+    --file-descriptor-4/Stream?=null:
   if (arguments.any: it is not string):
     throw "INVALID_ARGUMENT"
   if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
@@ -247,13 +375,19 @@ fork use-path stdin stdout stderr command arguments -> List
     flat-environment[index++] = (value == null) ? null : value.stringify
   exception := catch:
     if stdin == PIPE-CREATED:
-      stdin = create-pipe-helper_ true 0 result
+      pipe := OpenPipe_ true
+      result[0] = pipe
+      stdin = pipe.fd_
     if stdout == PIPE-CREATED:
-      stdout = create-pipe-helper_ false 1 result
+      pipe := OpenPipe_ false
+      result[1] = pipe
+      stdout = pipe.fd_
     if stderr == PIPE-CREATED:
-      stderr = create-pipe-helper_ false 2 result
-    fd-3 := file-descriptor-3 ? file-descriptor-3.fd : -1
-    fd-4 := file-descriptor-4 ? file-descriptor-4.fd : -1
+      pipe := OpenPipe_ false
+      result[2] = pipe
+      stderr = pipe.fd_
+    fd-3 := file-descriptor-3 ? file-descriptor-3.fd_ : -1
+    fd-4 := file-descriptor-4 ? file-descriptor-4.fd_ : -1
     result[3] = fork_ process-resource-group_ use-path stdin stdout stderr fd-3 fd-4 command (Array_.ensure arguments) flat-environment
   if exception:
     // If an exception is thrown we end up here.  If the fork succeeded then
@@ -310,19 +444,19 @@ windows-escape_ path/string -> string:
   return accumulator.bytes.to-string
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command/string arg1/string -> OpenPipe:
+to --environment/Map?=null command/string arg1/string -> Stream:
   return to --environment=environment [command, arg1]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command/string arg1/string arg2/string -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string -> Stream:
   return to --environment=environment [command, arg1, arg2]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command/string arg1/string arg2/string arg3/string -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string arg3/string -> Stream:
   return to --environment=environment [command, arg1, arg2, arg3]
 
 /// Variant of $(to arguments).
-to --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> OpenPipe:
+to --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> Stream:
   return to --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -337,29 +471,29 @@ The close method on the returned writer will throw an exception if the
   child process crashes or exits with a non-zero exit code.
 The $environment argument is used as in $fork.
 */
-to --environment/Map?=null arguments -> OpenPipe:
+to --environment/Map?=null arguments -> Stream:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe true --child-process-name=arguments[0]
-  stdin := pipe-ends.fd
-  pipes := fork --environment=environment true stdin PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
+  pipe-ends := OpenPipe_ true --child-process-name=arguments[0]
+  stdin := pipe-ends.fd_
+  pipes := fork_ --environment=environment true stdin PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
   pipe-ends.pid = pipes[3]
   return pipe-ends
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command/string arg1/string -> OpenPipe:
+from --environment/Map?=null command/string arg1/string -> Stream:
   return from --environment=environment [command, arg1]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command/string arg1/string arg2/string -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string -> Stream:
   return from --environment=environment [command, arg1, arg2]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command/string arg1/string arg2/string arg3/string -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string arg3/string -> Stream:
   return from --environment=environment [command, arg1, arg2, arg3]
 
 /// Variant of $(from arguments).
-from --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> OpenPipe:
+from --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> Stream:
   return from --environment=environment [command, arg1, arg2, arg3, arg4]
 
 /**
@@ -375,12 +509,12 @@ The read method on the reader throws an exception if the process crashes or
   has a non-zero exit code.
 The $environment argument is used as in $fork.
 */
-from --environment/Map?=null arguments -> OpenPipe:
+from --environment/Map?=null arguments -> Stream:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe false --child-process-name=arguments[0]
-  stdout := pipe-ends.fd
-  pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
+  pipe-ends := OpenPipe_ false --child-process-name=arguments[0]
+  stdout := pipe-ends.fd_
+  pipes := fork_ --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
   pipe-ends.pid = pipes[3]
   return pipe-ends
 
@@ -412,9 +546,9 @@ The $environment argument is used as in $fork.
 backticks --environment/Map?=null arguments -> string:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe false
-  stdout := pipe-ends.fd
-  pipes := fork --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
+  pipe-ends := OpenPipe_ false
+  stdout := pipe-ends.fd_
+  pipes := fork_ --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
   pipe-ends.in.buffer-all
   output := pipe-ends.in.read-string (pipe-ends.in.buffered-size)
@@ -429,13 +563,17 @@ Returns the exit value of the process which can then be decoded into
   exit code or signal number.
 
 See $exit-code and $exit-signal.
+
+Deprecated. Use $Process.wait instead.
 */
 wait-for child-process:
-  wait-for_ child-process
-  state := monitor.ResourceState_ process-resource-group_ child-process
-  exit-value := state.wait
-  state.dispose
-  return exit-value
+  return Process.wait_ child-process
+
+/**
+Deprecated. Use $Process.wait-ignore instead.
+*/
+dont-wait-for subprocess -> none:
+  dont-wait-for_ subprocess
 
 /**
 Forks a program, and returns the exit status.
@@ -484,9 +622,9 @@ The $environment argument is used as in $fork.
 run-program --environment/Map?=null arguments -> int:
   if arguments is string:
     arguments = [arguments]
-  pipes := fork --environment=environment true PIPE-INHERITED PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
+  pipes := fork_ --environment=environment true PIPE-INHERITED PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
-  exit-value := wait-for child-process
+  exit-value := Process.wait_ child-process
   signal := exit-signal exit-value
   if signal:
     throw
@@ -494,12 +632,15 @@ run-program --environment/Map?=null arguments -> int:
         signal-to-string signal
   return exit-code exit-value
 
+/** The stdin of the current process. */
 stdin -> Stream:
   return get-standard-pipe_ 0
 
+/** The stdout of the current process. */
 stdout -> Stream:
   return get-standard-pipe_ 1
 
+/** The stderr of the current process. */
 stderr -> Stream:
   return get-standard-pipe_ 2
 
@@ -550,7 +691,7 @@ fd-to-pipe_ resource-group fd:
 process-init_:
   #primitive.subprocess.init
 
-dont-wait-for subprocess -> none:
+dont-wait-for_ subprocess -> none:
   #primitive.subprocess.dont-wait-for
 
 wait-for_ subprocess -> none:

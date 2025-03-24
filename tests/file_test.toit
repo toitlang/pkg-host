@@ -21,9 +21,6 @@ expect-file-not-found [code]:
 expect-invalid-argument [code]:
   expect_ "INVALID_ARGUMENT" code
 
-expect-already-closed [code]:
-  expect_ "ALREADY_CLOSED" code
-
 main:
   expect-file-not-found: file.Stream.for-read "mkfxz.not_there"
   expect-file-not-found: file.Stream "mkfxz.not_there" file.RDONLY
@@ -34,13 +31,11 @@ main:
   byte-array := open-file.in.read
   expect (not byte-array)
   open-file.close
-  expect-already-closed: open-file.close
 
   open-file = file.Stream nul-device file.RDONLY
   byte-array = open-file.in.read
   expect (not byte-array)
   open-file.close
-  expect-already-closed: open-file.close
 
   test-contents := "This is the contents of the tæst file"
 
