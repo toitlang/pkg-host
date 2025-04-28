@@ -40,7 +40,7 @@ low-level-test toit-exe:
   process := pipe.fork
       --create-stdout
       toit-exe
-      ["ignored-0-argument", "tests/echo.toit", "horse"]
+      ["ignored-0-argument", "run", "--", "tests/echo.toit", "horse"]
   stdout := process.stdout
   expect-equals
     "horse"
