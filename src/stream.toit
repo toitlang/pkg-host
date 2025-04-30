@@ -7,7 +7,7 @@ import reader as old-reader
 
 import .file as file-lib
 import .file show RDONLY WRONLY RDWR APPEND CREAT TRUNC
-import .pipe show OpenPipe_
+import .pipe show OpenPipe
 
 interface Stream implements old-reader.Reader:
   in -> io.CloseableReader
@@ -78,10 +78,10 @@ interface Stream implements old-reader.Reader:
   Constructs a pipe to send data to a child process.
   */
   constructor --parent-to-child/True --child-process-name="child process":
-    return OpenPipe_ true --child-process-name=child-process-name
+    return OpenPipe true --child-process-name=child-process-name
 
   /**
   Constructs a pipe to receive data from a child process.
   */
   constructor --child-to-parent/True --child-process-name="child process":
-    return OpenPipe_ false --child-process-name=child-process-name
+    return OpenPipe false --child-process-name=child-process-name
