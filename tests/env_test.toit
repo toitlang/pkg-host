@@ -8,6 +8,8 @@ import host.os
 import host.file
 import system show platform PLATFORM-WINDOWS
 
+import .utils
+
 main args:
   if args.size < 1:
     print "Usage: env_test.toit <toit_exe>"
@@ -19,21 +21,17 @@ main args:
 
   toit-exe := args[0]
 
-  // Try to run the toit executable.
-  exception := catch: pipe.backticks toit-exe "--version"
-  if exception:
-    print "Running the given toit executable '$toit-exe' failed: $exception"
-    exit 1
+  check-toit-exe toit-exe
 
-  pipe.system "$toit-exe tests/echo.toit FOO=\$FOO"
-  pipe.system --environment={"FOO": 123} "$toit-exe tests/echo.toit FOO=\$FOO"
+  pipe.system "$toit-exe run -- tests/echo.toit FOO=\$FOO"
+  pipe.system --environment={"FOO": 123} "$toit-exe run -- tests/echo.toit FOO=\$FOO"
 
   shell := platform == PLATFORM-WINDOWS ? ["cmd", "/S", "/C"] : ["sh", "-c"]
 
   expect-equals "BAR=1.5"
       (pipe.backticks --environment={"BAR": 1.5} toit-exe "tests/echo.toit" "BAR=\$BAR").trim
   expect-equals "BAR="
-      (pipe.backticks shell + ["$toit-exe tests/echo.toit BAR=\$BAR"]).trim
+      (pipe.backticks shell + ["$toit-exe run -- tests/echo.toit BAR=\$BAR"]).trim
 
   fd := pipe.from --environment={"FISH": "HORSE"} toit-exe "tests/echo.toit" "\$FISH"
   expect-equals "HORSE" fd.in.read.to-string.trim
@@ -41,6 +39,6 @@ main args:
   user := os.env.get "USER"
   if user:
     expect-equals "$user"
-      (pipe.backticks shell + ["$toit-exe tests/echo.toit \$USER"]).trim
+      (pipe.backticks shell + ["$toit-exe run -- tests/echo.toit \$USER"]).trim
     user-fd := pipe.from --environment={"USER": null} toit-exe "tests/echo.toit" "\$USER"
     expect-equals "" user-fd.in.read.to-string.trim
