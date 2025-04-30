@@ -35,14 +35,14 @@ external-test args:
 
   toit-exe := args[0]
 
-  pipe.system "$toit-exe tests/echo.toit FOO=\$FOO"
-  pipe.system --environment={"FOO": 123} "$toit-exe tests/echo.toit FOO=\$FOO"
+  pipe.system "$toit-exe run -- tests/echo.toit FOO=\$FOO"
+  pipe.system --environment={"FOO": 123} "$toit-exe run -- tests/echo.toit FOO=\$FOO"
 
   expect-equals "BAR=1.5"
       (pipe.backticks --environment={"BAR": 1.5} toit-exe "tests/echo.toit" "BAR=\$BAR").trim
 
   expect-equals "string with \" in it"
-      (pipe.backticks toit-exe "tests/echo.toit" "string with \" in it").trim
+      (pipe.backticks toit-exe "run" "--" "tests/echo.toit" "string with \" in it").trim
 
   expect-equals "string with \\\" in it"
-      (pipe.backticks toit-exe "tests/echo.toit" "string with \\\" in it").trim
+      (pipe.backticks toit-exe "run" "--" "tests/echo.toit" "string with \\\" in it").trim
