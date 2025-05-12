@@ -78,10 +78,10 @@ interface Stream implements old-reader.Reader:
   Constructs a pipe to send data to a child process.
   */
   constructor --parent-to-child/True --child-process-name="child process":
-    return OpenPipe true --child-process-name=child-process-name
+    return OpenPipe true --child-process-name=child-process-name  // @no-warn
 
   /**
   Constructs a pipe to receive data from a child process.
   */
   constructor --child-to-parent/True --child-process-name="child process":
-    return OpenPipe false --child-process-name=child-process-name
+    return OpenPipe false --child-process-name=child-process-name  // @no-warn
