@@ -38,7 +38,7 @@ get-standard-pipe_ fd/int -> Stream:
     if file.is-open-file_ fd:
       standard-pipes_[fd] = file.OpenFile_.internal_ fd
     else:
-      standard-pipes_[fd] = OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
+      standard-pipes_[fd] = OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)  // @no-warn
   return standard-pipes_[fd]
 
 /**
@@ -54,7 +54,7 @@ get-numbered-pipe fd/int -> Stream:
   if file.is-open-file_ fd:
     return file.OpenFile_.internal_ fd
   else:
-    return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)
+    return OpenPipe.from-std_ (fd-to-pipe_ pipe-resource-group_ fd)  // @no-warn
 
 class OpenPipeReader_ extends io.CloseableReader:
   pipe_/OpenPipe_
@@ -378,15 +378,15 @@ fork_ use-path stdin stdout stderr command arguments -> List
     flat-environment[index++] = (value == null) ? null : value.stringify
   exception := catch:
     if stdin == PIPE-CREATED:
-      pipe := OpenPipe true
+      pipe := OpenPipe true  // @no-warn
       result[0] = pipe
       stdin = pipe.fd_
     if stdout == PIPE-CREATED:
-      pipe := OpenPipe false
+      pipe := OpenPipe false  // @no-warn
       result[1] = pipe
       stdout = pipe.fd_
     if stderr == PIPE-CREATED:
-      pipe := OpenPipe false
+      pipe := OpenPipe false  // @no-warn
       result[2] = pipe
       stderr = pipe.fd_
     fd-3 := file-descriptor-3 ? file-descriptor-3.fd_ : -1
@@ -477,7 +477,7 @@ The $environment argument is used as in $fork.
 to --environment/Map?=null arguments -> Stream:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe true --child-process-name=arguments[0]
+  pipe-ends := OpenPipe true --child-process-name=arguments[0]  // @no-warn
   stdin := pipe-ends.fd_
   pipes := fork_ --environment=environment true stdin PIPE-INHERITED PIPE-INHERITED arguments[0] arguments
   pipe-ends.pid = pipes[3]
@@ -515,7 +515,7 @@ The $environment argument is used as in $fork.
 from --environment/Map?=null arguments -> Stream:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe false --child-process-name=arguments[0]
+  pipe-ends := OpenPipe false --child-process-name=arguments[0]  // @no-warn
   stdout := pipe-ends.fd_
   pipes := fork_ --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
   pipe-ends.pid = pipes[3]
@@ -549,7 +549,7 @@ The $environment argument is used as in $fork.
 backticks --environment/Map?=null arguments -> string:
   if arguments is string:
     arguments = [arguments]
-  pipe-ends := OpenPipe false
+  pipe-ends := OpenPipe false  // @no-warn
   stdout := pipe-ends.fd_
   pipes := fork_ --environment=environment true PIPE-INHERITED stdout PIPE-INHERITED arguments[0] arguments
   child-process := pipes[3]
