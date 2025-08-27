@@ -543,3 +543,29 @@ is-rooted_ path/string -> bool:
     if path.starts-with "\\" or path.starts-with "/": return true
     return path.size >= 2 and is-volume-letter_ path[0] and path[1] == ':'
   return path.starts-with "/"
+
+NO-CHANGE-TIME_ ::= (1 << 30) - 2
+
+update-time path/string --access/Time?=null --modification/Time?=null:
+  atime-s/int := ?
+  atime-ns/int := ?
+  if access:
+    atime-s = access.s-since-epoch
+    atime-ns = access.ns-part
+  else:
+    atime-s = 0
+    atime-ns = NO-CHANGE-TIME_
+
+  mtime-s/int := ?
+  mtime-ns/int := ?
+  if modification:
+    mtime-s = modification.s-since-epoch
+    mtime-ns = modification.ns-part
+  else:
+    mtime-s = 0
+    mtime-ns = NO-CHANGE-TIME_
+
+  update-times_ path atime-s atime-ns mtime-s mtime-ns
+
+update-times_ path/string atime-s/int atime-ns/int mtime-s/int mtime-ns/int -> none:
+  #primitive.file.update-times
