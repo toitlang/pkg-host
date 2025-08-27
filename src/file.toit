@@ -544,28 +544,28 @@ is-rooted_ path/string -> bool:
     return path.size >= 2 and is-volume-letter_ path[0] and path[1] == ':'
   return path.starts-with "/"
 
-NO_CHANGE_TIME_ ::= (1 << 30) - 2
+NO-CHANGE-TIME_ ::= (1 << 30) - 2
 
 update-time path/string --access/Time?=null --modification/Time?=null:
-  atime_s/int := ?
-  atime_ns/int := ?
+  atime-s/int := ?
+  atime-ns/int := ?
   if access:
-    atime_s = access.s-since-epoch
-    atime_ns = access.ns-part
+    atime-s = access.s-since-epoch
+    atime-ns = access.ns-part
   else:
-    atime_s = 0
-    atime_ns = NO-CHANGE-TIME_
+    atime-s = 0
+    atime-ns = NO-CHANGE-TIME_
 
-  mtime_s/int := ?
-  mtime_ns/int := ?
+  mtime-s/int := ?
+  mtime-ns/int := ?
   if modification:
-    mtime_s = modification.s-since-epoch
-    mtime_ns = modification.ns-part
+    mtime-s = modification.s-since-epoch
+    mtime-ns = modification.ns-part
   else:
-    mtime_s = 0
-    mtime_ns = NO-CHANGE-TIME_
+    mtime-s = 0
+    mtime-ns = NO-CHANGE-TIME_
 
-  update-times_ path atime_s atime_ns mtime_s mtime_ns
+  update-times_ path atime-s atime-ns mtime-s mtime-ns
 
-update-times_ path/string atime_s/int atime_ns/int mtime_s/int mtime_ns/int -> none:
+update-times_ path/string atime-s/int atime-ns/int mtime-s/int mtime-ns/int -> none:
   #primitive.file.update-times
