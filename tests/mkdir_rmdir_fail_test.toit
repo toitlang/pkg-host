@@ -19,3 +19,5 @@ main:
   with-tmp-dir: | tmp-dir |
     mkdir "$tmp-dir/foo"
     expect-throw "ALREADY_EXISTS": mkdir "$tmp-dir/foo"
+
+    expect-throw "LOOKUP_FAILED": rmdir --recursive "$tmp-dir/bar"
