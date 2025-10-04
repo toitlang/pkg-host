@@ -20,4 +20,11 @@ main:
     mkdir "$tmp-dir/foo"
     expect-throw "ALREADY_EXISTS": mkdir "$tmp-dir/foo"
 
-    expect-throw "LOOKUP_FAILED": rmdir --recursive "$tmp-dir/bar"
+    not-found-path := "$tmp-dir-/bar"
+    expect-throw "FILE_NOT_FOUND": rmdir not-found-path
+    expect-throw "FILE_NOT_FOUND": rmdir --recursive not-found-path
+
+    not-dir-path := "$tmp-dir/file.txt"
+    file.write-contents "not a directory" --path=not-dir-path
+    expect-throw "FILE_NOT_FOUND": rmdir not-dir-path
+    expect-throw "FILE_NOT_FOUND": rmdir --recursive not-dir-path
