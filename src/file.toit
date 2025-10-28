@@ -570,9 +570,11 @@ update-time path/string --access/Time?=null --modification/Time?=null:
 
 /**
 Searches for an executable file with the given $name in the system PATH.
+
 Returns null if no such executable is found.
-Returns the path as provided by the PATH. For example, if the PATH contains
-  `..` and the executable is found there, then `../name` is returned.
+Returns a path relative to the part of the PATH where the executable is found.
+  For example, if the PATH contains `..` and the executable is found there,
+  then `../name` is returned.
 */
 find-executable name/string -> string?:
   bin-paths := ?
