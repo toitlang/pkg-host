@@ -574,7 +574,7 @@ Searches for an executable file with the given $name in the system PATH.
 Returns null if no such executable is found.
 Returns a path relative to the part of the PATH where the executable is found.
   For example, if the PATH contains `..` and the executable is found there,
-  then `../name` is returned.
+  then `../name` (or `..\name`) is returned.
 */
 find-executable name/string -> string?:
   bin-paths := ?
@@ -595,13 +595,15 @@ find-executable name/string -> string?:
     extensions = [""]
 
   bin-paths.do: | bin-path/string |
+    is-windows := system.platform == system.PLATFORM-WINDOWS
+    separator := is-windows ? "\\" : "/"
     extensions.do: | ext/string |
       candidate := if bin-path.ends-with "/" or bin-path.ends-with "\\":
         "$bin-path$name$ext"
       else:
-        "$bin-path/$name$ext"
+        "$bin-path/$separator$name$ext"
       if is-file candidate:
-        if system.platform == system.PLATFORM-WINDOWS:
+        if is-windows:
           // On Windows, just being a file is enough.
           return candidate
         // On other platforms, it must also be executable.
