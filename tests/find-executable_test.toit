@@ -14,7 +14,7 @@ main:
   if system.platform == system.PLATFORM-WINDOWS:
     // 'cmd.exe' should always be present on Windows systems.
     shell = "cmd"
-    shell-args = ["/c", "echo", "hello"]
+    shell-args = ["/c", "echo hello"]
   else:
     // 'sh' should always be present on Unix-like systems.
     shell = "sh"
