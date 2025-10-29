@@ -8,6 +8,7 @@ import io
 import system
 import .directory
 import .stream
+import .os as os
 
 export Stream
 
@@ -566,6 +567,52 @@ update-time path/string --access/Time?=null --modification/Time?=null:
     mtime-ns = NO-CHANGE-TIME_
 
   update-times_ path atime-s atime-ns mtime-s mtime-ns
+
+/**
+Searches for an executable file with the given $name in the system PATH.
+
+Returns null if no such executable is found.
+Returns a path relative to the part of the PATH where the executable is found.
+  For example, if the PATH contains `..` and the executable is found there,
+  then `../name` (or `..\name`) is returned.
+*/
+find-executable name/string -> string?:
+  bin-paths := ?
+  extensions := ?
+  if system.platform == system.PLATFORM-WINDOWS:
+    path-env := os.env.get "PATH"
+    if not path-env: return null
+    bin-paths = path-env.split ";"
+    pathext-env := os.env.get "PATHEXT"
+    if not pathext-env:
+      extensions = [".exe", ".bat", ".cmd"]
+    else:
+      extensions = pathext-env.split ";"
+  else:
+    path-env := os.env.get "PATH"
+    if not path-env: return null
+    bin-paths = path-env.split ":"
+    extensions = [""]
+
+  bin-paths.do: | bin-path/string |
+    is-windows := system.platform == system.PLATFORM-WINDOWS
+    separator := is-windows ? "\\" : "/"
+    extensions.do: | ext/string |
+      candidate := if bin-path.ends-with "/" or bin-path.ends-with "\\":
+        "$bin-path$name$ext"
+      else:
+        "$bin-path/$separator$name$ext"
+      if is-file candidate:
+        if is-windows:
+          // On Windows, just being a file is enough.
+          return candidate
+        // On other platforms, it must also be executable.
+        stat := stat candidate
+        // We are a bit loose here and accept any executable bit, even if
+        // it is not for the current user.
+        if stat and stat[ST-MODE] & 0b001001001 != 0:
+          return candidate
+  return null
 
 update-times_ path/string atime-s/int atime-ns/int mtime-s/int mtime-ns/int -> none:
   #primitive.file.update-times
