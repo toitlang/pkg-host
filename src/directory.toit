@@ -13,7 +13,12 @@ The default directory separator for the underlying operating system.
 */
 SEPARATOR/string ::= (system.platform == system.PLATFORM-WINDOWS) ? "\\" : "/"
 
-/** Removes an empty directory. */
+/**
+Removes an empty directory.
+
+Throws a "FILE_NOT_FOUND" exception if the path does not exist or
+  is not a directory.
+*/
 rmdir path/string -> none:
   #primitive.file.rmdir
 
@@ -24,14 +29,17 @@ Does not follow symlinks, but removes the symlink itself.
 
 If $force is true, also deletes files in read-only directories. This only
   has an effect when $recursive is set.
+
+Throws a "FILE_NOT_FOUND" exception if the path does not exist or
+  is not a directory.
 */
 rmdir path/string --recursive/bool --force/bool=false -> none:
   if not recursive:
     rmdir path
     return
   dir-stat := file.stat --no-follow-links path
-  if dir-stat[file.ST-TYPE] != file.DIRECTORY:
-    throw "NOT_A_DIRECTORY"
+  if not dir-stat or dir-stat[file.ST-TYPE] != file.DIRECTORY:
+    throw "FILE_NOT_FOUND"
 
   // A queue of directories to delete. Each entry is a pair of a path and a
   // boolean indicating whether the directory is known to be empty.
