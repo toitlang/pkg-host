@@ -98,7 +98,7 @@ class OpenPipe extends OpenPipe_:
 
 class OpenPipe_ implements Stream:
   resource_ := ?
-  state_ := ?
+  state_/monitor.ResourceState_? := ?
   pid := null
   child-process-name_ /string?
   input_ /int := UNKNOWN-DIRECTION_
@@ -153,6 +153,7 @@ class OpenPipe_ implements Stream:
   read_ -> ByteArray?:
     while true:
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
+      if not state_: return null
       result := read-from-pipe_ resource_
       if result != -1:
         if result == null:
