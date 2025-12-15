@@ -152,6 +152,7 @@ class OpenPipe_ implements Stream:
 
   read_ -> ByteArray?:
     while true:
+      if not state_: return null
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
       if not state_: return null
       result := read-from-pipe_ resource_
