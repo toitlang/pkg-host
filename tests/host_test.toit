@@ -5,6 +5,7 @@
 import expect show *
 import host
 import host.file
+import system
 
 main:
   test-read-write
@@ -17,6 +18,10 @@ main:
   test-list-directory
   test-list-directory-full-path
   test-list-directory-block
+  test-delete
+  test-start-process
+  test-run
+  test-find-executable
   test-re-exports
 
 test-read-write:
@@ -147,6 +152,68 @@ test-list-directory-block:
     expect (collected.contains "a.txt")
     expect (collected.contains "b.txt")
 
+test-delete:
+  host.with-tmp-directory "/tmp/host-test-": | dir |
+    // Delete a file.
+    file-path := "$dir/file.txt"
+    host.write file-path --data="bye"
+    host.delete file-path
+    expect (not (host.is-file file-path))
+
+    // Delete an empty directory (no flags needed).
+    empty-dir := "$dir/empty"
+    host.mkdir empty-dir
+    host.delete empty-dir
+    expect (not (host.is-directory empty-dir))
+
+    // Delete a non-empty directory needs --recursive.
+    full-dir := "$dir/full"
+    host.mkdir full-dir
+    host.write "$full-dir/inner.txt" --data="x"
+    host.delete full-dir --recursive
+    expect (not (host.is-directory full-dir))
+
+    // --force lets us delete a read-only directory tree on POSIX.
+    if system.platform != system.PLATFORM-WINDOWS:
+      ro-dir := "$dir/ro"
+      host.mkdir ro-dir
+      host.write "$ro-dir/inner.txt" --data="x"
+      file.chmod ro-dir 0b101_000_000  // r-x------
+      host.delete ro-dir --recursive --force
+      expect (not (host.is-directory ro-dir))
+
+    // Missing path throws.
+    expect-throw "FILE_NOT_FOUND":
+      host.delete "$dir/does-not-exist"
+
+test-start-process:
+  process := host.start-process "echo" ["hi"] --create-stdout
+  data := process.stdout.in.read-all
+  process.wait
+  expect-equals 0 process.exit-code
+  expect-null process.exit-signal
+  expect-equals "hi" data.to-string.trim
+
+test-run:
+  output := host.run "echo" "hello"
+  expect-equals "hello" output.trim
+
+  output2 := host.run ["echo", "a", "b"]
+  expect-equals "a b" output2.trim
+
+  // Non-zero exit throws.
+  expect-throw "false: exited with status 1":
+    host.run "false"
+
+test-find-executable:
+  // 'sh' on POSIX, 'cmd' on Windows.
+  name := system.platform == system.PLATFORM-WINDOWS ? "cmd" : "sh"
+  located := host.find-executable name
+  expect-not-null located
+  expect (host.is-file located)
+
+  expect-null (host.find-executable "this-binary-should-not-exist-12345")
+
 test-re-exports:
   // Verify that re-exported functions and classes are accessible.
   // We just check they exist and are callable — the underlying
@@ -169,15 +236,10 @@ test-re-exports:
     expect (host.is-directory sub)
     host.rmdir sub
 
-    // Stream.
-    stream := host.Stream.for-write "$dir/stream.txt"
-    stream.out.write "test"
-    stream.close
-
     // cwd and realpath.
     expect-not-null host.cwd
     rp := host.realpath dir
     expect-not-null rp
 
-    // SEPARATOR.
-    expect (host.SEPARATOR == "/" or host.SEPARATOR == "\\")
+    // DIRECTORY-SEPARATOR.
+    expect (host.DIRECTORY-SEPARATOR == "/" or host.DIRECTORY-SEPARATOR == "\\")

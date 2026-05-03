@@ -252,6 +252,7 @@ fork use-path stdin stdout stderr command arguments -> List
 /** The result of forking a process with $fork. */
 class Process:
   fork-data_/List
+  exit-value_/int? := null
 
   constructor .fork-data_:
 
@@ -280,12 +281,15 @@ class Process:
   stderr -> Stream?: return fork-data_[2]
 
   /**
-  Wait for the process to finish and return the exit-value.
+  Waits for the process to finish and returns the raw exit value.
 
-  Use $exit-signal and $exit-code to decode the exit value.
+  After this method returns, $exit-code and $exit-signal can be used to
+    decode the result without reaching for the free-function decoders.
   */
   wait -> int:
-    return wait_ pid
+    if exit-value_ == null:
+      exit-value_ = wait_ pid
+    return exit-value_
 
   static wait_ child-process -> int:
     wait-for_ child-process
@@ -299,6 +303,32 @@ class Process:
   */
   wait-ignore -> none:
     dont-wait-for_ pid
+
+  /**
+  Returns the exit code of the finished process.
+
+  Returns null if $wait has not been called yet, or if the process exited
+    because of a signal. Use $exit-signal in the latter case.
+  */
+  exit-code -> int?:
+    value := exit-value_
+    if value == null: return null
+    if (value & PROCESS-SIGNALLED_) != 0: return null
+    return (value >> PROCESS-EXIT-CODE-SHIFT_) & PROCESS-EXIT-CODE-MASK_
+
+  /**
+  Returns the signal that terminated the process, or null.
+
+  Returns null if $wait has not been called yet, or if the process exited
+    normally with an exit code. Use $exit-code in that case.
+
+  Use $signal-to-string to convert the signal to a string.
+  */
+  exit-signal -> int?:
+    value := exit-value_
+    if value == null: return null
+    if (value & PROCESS-SIGNALLED_) == 0: return null
+    return (value >> PROCESS-SIGNAL-SHIFT_) & PROCESS-SIGNAL-MASK_
 
 /**
 Forks a process.

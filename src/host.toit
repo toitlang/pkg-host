@@ -7,29 +7,26 @@ import encoding.yaml as yaml-codec
 import io
 
 import .file show
-    is-file is-directory delete
+    is-file is-directory find-executable
     Stream
 import .file as file
 
 import .directory show
-    mkdir rmdir mkdtemp
+    mkdir rmdir
     chdir cwd realpath
-    SEPARATOR
 import .directory as directory
 
 import .pipe show
-    fork backticks run-program
-    stdin stdout stderr
-    exit-code exit-signal
+    stdin stdout stderr print-to-stderr
     Process
 import .pipe as pipe
 
 import .os show
     env EnvironmentVariableMap
 
-export is-file is-directory delete Stream
-export mkdir rmdir mkdtemp chdir cwd realpath SEPARATOR
-export fork backticks run-program stdin stdout stderr exit-code exit-signal Process
+export is-file is-directory find-executable
+export mkdir rmdir chdir cwd realpath
+export stdin stdout stderr print-to-stderr Process
 export env EnvironmentVariableMap
 
 /**
@@ -40,9 +37,11 @@ Provides convenient access to file operations, directory management,
 
 For less common operations, import the specific module directly:
 - `import host.file` for $file.copy, $file.chmod, $file.rename,
-  $file.link, $file.size, etc.
-- `import host.pipe` for $pipe.to, $pipe.from, $pipe.system, etc.
-- `import host.directory` for the low-level $directory.DirectoryStream.
+  $file.link, $file.size, $file.Stream (streaming I/O), etc.
+- `import host.pipe` for $pipe.fork, $pipe.backticks, $pipe.run-program,
+  $pipe.to, $pipe.from, $pipe.system, etc.
+- `import host.directory` for $directory.mkdtemp and the low-level
+  $directory.DirectoryStream.
 
 # Examples
 
@@ -103,16 +102,43 @@ main:
     print path  // => /tmp/some-entry
 ```
 
-Run external programs:
+Run an external program and capture its stdout:
 ```
 import host
 
 main:
-  output := host.backticks "echo" "hello"
-  print output  // => hello
+  output := host.run "echo" "hello"
+  print output  // => "hello\n"
+```
+
+Start a process asynchronously and wait for it to finish:
+```
+import host
+
+main:
+  process := host.start-process "sleep" ["1"]
+  process.wait
+  if process.exit-signal:
+    print "killed by signal $process.exit-signal"
+  else:
+    print "exit code: $process.exit-code"
+```
+
+Delete a directory tree:
+```
+import host
+
+main:
+  host.delete "build" --recursive --force
 ```
 */
 
+/**
+The default directory separator for the underlying operating system.
+
+On POSIX systems this is forward slash; on Windows it is backslash.
+*/
+DIRECTORY-SEPARATOR/string ::= directory.SEPARATOR
 
 /**
 Information about a file system entry.
@@ -311,6 +337,26 @@ write --yaml path/string --data -> none:
   file.write-contents (yaml-codec.encode data) --path=path
 
 /**
+Deletes the file or directory at $path.
+
+For files, $recursive and $force are ignored.
+
+For directories, $recursive must be true unless the directory is
+  already empty (otherwise the underlying $directory.rmdir would
+  throw). With $force, files inside read-only directories are also
+  removed; this only takes effect together with $recursive.
+
+Throws if $path does not exist.
+*/
+delete path/string --recursive/bool=false --force/bool=false -> none:
+  info := stat path --follow-links=false
+  if not info: throw "FILE_NOT_FOUND"
+  if info.is-directory:
+    directory.rmdir path --recursive=recursive --force=force
+  else:
+    file.delete path
+
+/**
 Creates a temporary directory and calls the given $block with its path.
 
 The directory is removed (recursively and forcefully) when the block
@@ -329,7 +375,7 @@ main:
 ```
 */
 with-tmp-directory prefix/string="" [block]:
-  tmp-dir := mkdtemp prefix
+  tmp-dir := directory.mkdtemp prefix
   try:
     block.call tmp-dir
   finally:
@@ -367,3 +413,114 @@ list-directory path/string --full-path/bool=false -> List:
   result := []
   list-directory --full-path=full-path path: | entry | result.add entry
   return result
+
+/**
+Starts an external program as a child process.
+
+Looks up $command on the PATH (unless $use-path is false) and runs it,
+  passing the given $arguments. The child's argv list is built as
+  $command followed by $arguments — callers do not need to repeat
+  $command at the front of $arguments. Returns a $Process handle that
+  can be used to access the child's standard streams, wait for
+  completion, or query the exit status.
+
+To avoid leaving a zombie, eventually call $Process.wait or
+  $Process.wait-ignore.
+
+Attaches the given $stdin, $stdout, $stderr streams to the corresponding
+  streams of the child process. If a stream is null, then it is inherited.
+  Use $(Stream.constructor --parent-to-child) or
+  $(Stream.constructor --child-to-parent) to create a fresh pipe.
+Alternatively, a pipe can be created using the $create-stdin,
+  $create-stdout, and $create-stderr flags. In this case use $Process.stdin,
+  $Process.stdout, and $Process.stderr to access the streams.
+The $stdin and $create-stdin (respectively $stdout and $create-stdout,
+  $stderr and $create-stderr) arguments are mutually exclusive.
+
+The $file-descriptor-3 and $file-descriptor-4 can be used to pass streams
+  as open file descriptors 3 and/or 4 to the child process.
+
+The $environment variable, if given, must be a map where the keys are strings
+  and the values strings or null, where null indicates that the variable
+  should be unset in the child process.
+
+If you override the PATH environment variable, but set the $use-path flag,
+  the new value of PATH will be used to find the executable.
+
+# Examples
+```
+import host
+
+main:
+  process := host.start-process "echo" ["hi"] --create-stdout
+  data := process.stdout.in.read-all
+  process.wait
+  print data.to-string  // => "hi\n"
+```
+*/
+start-process command/string arguments/List -> Process
+    --use-path/bool=true
+    --environment/Map?=null
+    --stdin/Stream?=null
+    --stdout/Stream?=null
+    --stderr/Stream?=null
+    --create-stdin/bool=false
+    --create-stdout/bool=false
+    --create-stderr/bool=false
+    --file-descriptor-3/Stream?=null
+    --file-descriptor-4/Stream?=null:
+  argv := List arguments.size + 1
+  argv[0] = command
+  arguments.size.repeat: argv[it + 1] = arguments[it]
+  return pipe.fork command argv
+      --use-path=use-path
+      --environment=environment
+      --stdin=stdin
+      --stdout=stdout
+      --stderr=stderr
+      --create-stdin=create-stdin
+      --create-stdout=create-stdout
+      --create-stderr=create-stderr
+      --file-descriptor-3=file-descriptor-3
+      --file-descriptor-4=file-descriptor-4
+
+/// Variant of $(run arguments).
+run --environment/Map?=null command/string arg1/string -> string:
+  return pipe.backticks --environment=environment [command, arg1]
+
+/// Variant of $(run arguments).
+run --environment/Map?=null command/string arg1/string arg2/string -> string:
+  return pipe.backticks --environment=environment [command, arg1, arg2]
+
+/// Variant of $(run arguments).
+run --environment/Map?=null command/string arg1/string arg2/string arg3/string -> string:
+  return pipe.backticks --environment=environment [command, arg1, arg2, arg3]
+
+/// Variant of $(run arguments).
+run --environment/Map?=null command/string arg1/string arg2/string arg3/string arg4/string -> string:
+  return pipe.backticks --environment=environment [command, arg1, arg2, arg3, arg4]
+
+/**
+Runs an external program and returns its captured stdout.
+
+Looks up the command on the PATH and runs it. The captured stdout is
+  returned as a string when the process finishes.
+
+Can be passed either a command (with no arguments) as a string, or a list
+  of arguments where the 0th argument is the command.
+
+Throws if the program exits with a non-zero exit code or because of a signal.
+
+The $environment argument is used as in $start-process.
+
+# Examples
+```
+import host
+
+main:
+  output := host.run "echo" "hello"
+  print output  // => "hello\n"
+```
+*/
+run --environment/Map?=null arguments -> string:
+  return pipe.backticks --environment=environment arguments
