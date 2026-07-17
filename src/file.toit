@@ -575,6 +575,9 @@ Returns null if no such executable is found.
 Returns a path relative to the part of the PATH where the executable is found.
   For example, if the PATH contains `..` and the executable is found there,
   then `../name` (or `..\name`) is returned.
+Follows shell semantics and treats an empty entry of the PATH as the current
+  directory, so an executable found through one is returned as `./name`
+  (or `.\name`).
 */
 find-executable name/string -> string?:
   bin-paths := ?
@@ -594,14 +597,16 @@ find-executable name/string -> string?:
     bin-paths = path-env.split ":"
     extensions = [""]
 
+  is-windows := system.platform == system.PLATFORM-WINDOWS
+  separator := is-windows ? "\\" : "/"
   bin-paths.do: | bin-path/string |
-    is-windows := system.platform == system.PLATFORM-WINDOWS
-    separator := is-windows ? "\\" : "/"
+    // An empty entry stands for the current directory.
+    dir := bin-path == "" ? "." : bin-path
     extensions.do: | ext/string |
-      candidate := if bin-path.ends-with "/" or bin-path.ends-with "\\":
-        "$bin-path$name$ext"
+      candidate := if dir.ends-with "/" or dir.ends-with "\\":
+        "$dir$name$ext"
       else:
-        "$bin-path/$separator$name$ext"
+        "$dir$separator$name$ext"
       if is-file candidate:
         if is-windows:
           // On Windows, just being a file is enough.
