@@ -9,7 +9,7 @@ import host.file
 import host.pipe
 import host.pipe show windows-escape_
 import semver
-import system show platform PLATFORM-FREERTOS
+import system show platform PLATFORM-FREERTOS PLATFORM-WINDOWS
 
 test-exit-value command args expected-exit-value sleep-time/int:
   complete-args := [command] + args
@@ -49,6 +49,41 @@ test-exit-signal sleep-time/int:
   expect-equals null (pipe.exit-code exit-value)
   expect-equals SIGKILL (pipe.exit-signal exit-value)
 
+test-interrupted-wait:
+  // Keep stdin open so the child cannot finish before the waits time out.
+  process := pipe.fork --create-stdin "cat" ["cat"]
+
+  errors := List 3
+  errors.size.repeat:
+    errors[it] = catch: with-timeout --ms=5: process.wait
+
+  SIGKILL := 9
+  pipe.kill_ process.pid SIGKILL
+  exit-value := with-timeout --ms=1_000: process.wait
+
+  errors.do: expect-equals DEADLINE-EXCEEDED-ERROR it
+  expect-equals SIGKILL (pipe.exit-signal exit-value)
+  expect-equals exit-value process.wait
+  expect-equals SIGKILL process.exit-signal
+
+test-ignored-soft-kill:
+  // Wait for the shell to install the handler before sending the signal.
+  process := pipe.fork
+      --create-stdout
+      "sh"
+      ["sh", "-c", "trap '' TERM; echo ready; exec sleep 60"]
+  process.stdout.in.read
+
+  SIGTERM := 15
+  SIGKILL := 9
+  pipe.kill_ process.pid SIGTERM
+  error := catch: with-timeout --ms=20: process.wait
+  pipe.kill_ process.pid SIGKILL
+  exit-value := with-timeout --ms=1_000: process.wait
+
+  expect-equals DEADLINE-EXCEEDED-ERROR error
+  expect-equals SIGKILL (pipe.exit-signal exit-value)
+
 main:
   test-windows-escaping
 
@@ -63,6 +98,9 @@ main:
 
   test-exit-signal 0
   test-exit-signal 20
+
+  25.repeat: test-interrupted-wait
+  if platform != PLATFORM-WINDOWS: test-ignored-soft-kill
 
 // Tests a private method in pipe.toit.
 test-windows-escaping:
