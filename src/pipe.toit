@@ -306,15 +306,14 @@ class Process:
   On POSIX systems the initial request is catchable. If $hard-after-ms is
     provided and the process has not exited after that many milliseconds, a
     signal that cannot be caught is sent. A value of 0 sends only the hard
-    termination signal.
+    termination signal. If $hard-after-ms is null, the call waits indefinitely
+    for the process to exit voluntarily.
 
   Windows has no equivalent catchable termination request for arbitrary child
     processes, so it always terminates the process immediately before waiting.
-
-  Throws `OUT_OF_RANGE` if $hard-after-ms is negative.
   */
   kill --wait/True --hard-after-ms/int?=null -> none:
-    if hard-after-ms != null and hard-after-ms < 0: throw "OUT_OF_RANGE"
+    if hard-after-ms and hard-after-ms < 0: throw "OUT_OF_RANGE"
 
     if hard-after-ms == 0 or sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
       kill --hard
@@ -322,7 +321,7 @@ class Process:
       return
 
     kill
-    if hard-after-ms == null:
+    if not hard-after-ms:
       this.wait
       return
 
