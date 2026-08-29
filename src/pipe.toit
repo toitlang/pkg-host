@@ -252,9 +252,11 @@ fork use-path stdin stdout stderr command arguments -> List
 /** The result of forking a process with $fork. */
 class Process:
   fork-data_/List
+  waiter_/ProcessWait_
   exit-value_/int? := null
 
   constructor .fork-data_:
+    waiter_ = ProcessWait_ fork-data_[3]
 
   /** The pid of the child process. */
   pid -> any: return fork-data_[3]
@@ -288,7 +290,7 @@ class Process:
   */
   wait -> int:
     if exit-value_ == null:
-      exit-value_ = wait_ pid
+      exit-value_ = waiter_.wait
     return exit-value_
 
   static wait_ child-process -> int:
@@ -302,7 +304,7 @@ class Process:
   Tells the system that we don't want to wait for the child process to finish.
   */
   wait-ignore -> none:
-    dont-wait-for_ pid
+    waiter_.ignore
 
   /**
   Returns the exit code of the finished process.
@@ -329,6 +331,45 @@ class Process:
     if value == null: return null
     if (value & PROCESS-SIGNALLED_) == 0: return null
     return (value >> PROCESS-SIGNAL-SHIFT_) & PROCESS-SIGNAL-MASK_
+
+monitor ProcessWait_:
+  child-process_/any
+  state_/monitor.ResourceState_? := null
+  exit-value_/int? := null
+  ignored_ := false
+
+  constructor .child-process_:
+
+  wait -> int:
+    if ignored_: throw "PROCESS_WAIT_IGNORED"
+    if exit-value_ != null: return exit-value_
+
+    if state_ == null:
+      // Do not let a timeout land between registering the subprocess and
+      // retaining its ResourceState_. A retry must use the same registration.
+      critical-do --respect-deadline=false:
+        if state_ == null:
+          wait-for_ child-process_
+          state_ = monitor.ResourceState_ process-resource-group_ child-process_
+
+    value := state_.wait
+    // Retain the result and dispose the notifier as one operation. This also
+    // makes concurrent and repeated waits observe the same result.
+    critical-do --respect-deadline=false:
+      if exit-value_ == null:
+        exit-value_ = value
+        state_.dispose
+        state_ = null
+    return exit-value_
+
+  ignore -> none:
+    if ignored_ or exit-value_ != null: return
+    critical-do --respect-deadline=false:
+      if state_:
+        state_.dispose
+        state_ = null
+      dont-wait-for_ child-process_
+      ignored_ = true
 
 /**
 Forks a process.
