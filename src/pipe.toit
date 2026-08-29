@@ -24,6 +24,9 @@ PROCESS-EXIT-CODE-MASK_ ::= 0xff
 PROCESS-SIGNAL-SHIFT_ ::= 10
 PROCESS-SIGNAL-MASK_ ::= 0xff
 
+SIGNAL-KILL_ ::= 9
+SIGNAL-TERMINATE_ ::= 15
+
 READ-EVENT_ ::= 1 << 0
 WRITE-EVENT_ ::= 1 << 1
 CLOSE-EVENT_ ::= 1 << 2
@@ -281,6 +284,64 @@ class Process:
   Returns null, if the stream wasn't created during forking.
   */
   stderr -> Stream?: return fork-data_[2]
+
+  /**
+  Requests that the child process terminate.
+
+  On POSIX systems the default is a catchable termination request. If $hard is
+    true, a signal that cannot be caught is sent instead.
+
+  Windows has no equivalent catchable termination request for arbitrary child
+    processes, so it always terminates the process immediately there.
+  */
+  kill --hard/bool=false -> none:
+    signal-value := hard ? SIGNAL-KILL_ : SIGNAL-TERMINATE_
+    if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+      signal-value = SIGNAL-KILL_
+    signal signal-value
+
+  /**
+  Requests that the child process terminate and waits for it to exit.
+
+  On POSIX systems the initial request is catchable. If $hard-after-ms is
+    provided and the process has not exited after that many milliseconds, a
+    signal that cannot be caught is sent. A value of 0 sends only the hard
+    termination signal. If $hard-after-ms is null, the call waits indefinitely
+    for the process to exit voluntarily.
+
+  Windows has no equivalent catchable termination request for arbitrary child
+    processes, so it always terminates the process immediately before waiting.
+  */
+  kill --wait/True --hard-after-ms/int?=null -> none:
+    if hard-after-ms and hard-after-ms < 0: throw "OUT_OF_RANGE"
+
+    if hard-after-ms == 0 or sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+      kill --hard
+      this.wait
+      return
+
+    kill
+    if not hard-after-ms:
+      this.wait
+      return
+
+    escalation-deadline := Time.monotonic-us + hard-after-ms * 1_000
+    outer-deadline := Task.current.deadline
+    escalation-is-first := not outer-deadline or escalation-deadline <= outer-deadline
+    error := catch --unwind=(: it != DEADLINE-EXCEEDED-ERROR or not escalation-is-first):
+      with-timeout --ms=hard-after-ms: this.wait
+    if error:
+      kill --hard
+      this.wait
+
+  /**
+  Sends the platform-specific signal $value to the child process.
+
+  POSIX systems accept their native signal numbers. Windows only supports
+    signal 9, which terminates the process immediately.
+  */
+  signal value/int -> none:
+    kill_ pid value
 
   /**
   Waits for the process to finish and returns the raw exit value.
