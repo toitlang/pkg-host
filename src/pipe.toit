@@ -24,6 +24,9 @@ PROCESS-EXIT-CODE-MASK_ ::= 0xff
 PROCESS-SIGNAL-SHIFT_ ::= 10
 PROCESS-SIGNAL-MASK_ ::= 0xff
 
+SIGNAL-KILL_ ::= 9
+SIGNAL-TERMINATE_ ::= 15
+
 READ-EVENT_ ::= 1 << 0
 WRITE-EVENT_ ::= 1 << 1
 CLOSE-EVENT_ ::= 1 << 2
@@ -281,6 +284,45 @@ class Process:
   Returns null, if the stream wasn't created during forking.
   */
   stderr -> Stream?: return fork-data_[2]
+
+  /**
+  Requests that the child process terminate.
+
+  On POSIX systems the default is a catchable termination request. If
+    $hard-after-ms is provided and the process has not exited after that many
+    milliseconds, a signal that cannot be caught is sent. A value of 0 sends
+    only the hard termination signal. The call waits during the grace period,
+    but does not wait for the process after sending the hard signal.
+
+  Windows has no equivalent catchable termination request for arbitrary child
+    processes, so it always terminates the process immediately there.
+
+  Throws `OUT_OF_RANGE` if $hard-after-ms is negative.
+  */
+  kill --hard-after-ms/int?=null -> none:
+    if hard-after-ms != null and hard-after-ms < 0: throw "OUT_OF_RANGE"
+
+    if hard-after-ms == 0 or sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+      signal SIGNAL-KILL_
+      return
+
+    signal SIGNAL-TERMINATE_
+    if hard-after-ms != null:
+      // Once a grace period has been requested, guarantee the escalation even
+      // if the caller has an earlier deadline or is canceled concurrently.
+      critical-do --respect-deadline=false:
+        error := catch --unwind=(: it != DEADLINE-EXCEEDED-ERROR):
+          with-timeout --ms=hard-after-ms: wait
+        if error: signal SIGNAL-KILL_
+
+  /**
+  Sends the platform-specific signal $value to the child process.
+
+  POSIX systems accept their native signal numbers. Windows only supports
+    signal 9, which terminates the process immediately.
+  */
+  signal value/int -> none:
+    kill_ pid value
 
   /**
   Waits for the process to finish and returns the raw exit value.
