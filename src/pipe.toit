@@ -339,15 +339,16 @@ monitor ProcessWait_:
   ignored_ := false
 
   constructor .child-process_:
+    add-finalizer this:: ignore
 
   wait -> int:
     if ignored_: throw "PROCESS_WAIT_IGNORED"
-    if exit-value_ != null: return exit-value_
+    if exit-value_: return exit-value_
 
     if state_ == null:
       // Do not let a timeout land between registering the subprocess and
       // retaining its ResourceState_. A retry must use the same registration.
-      critical-do --respect-deadline=false:
+      critical-do --no-respect-deadline:
         if state_ == null:
           wait-for_ child-process_
           state_ = monitor.ResourceState_ process-resource-group_ child-process_
@@ -355,21 +356,23 @@ monitor ProcessWait_:
     value := state_.wait
     // Retain the result and dispose the notifier as one operation. This also
     // makes concurrent and repeated waits observe the same result.
-    critical-do --respect-deadline=false:
-      if exit-value_ == null:
+    critical-do --no-respect-deadline:
+      if not exit-value_:
         exit-value_ = value
         state_.dispose
         state_ = null
+        remove-finalizer this
     return exit-value_
 
   ignore -> none:
-    if ignored_ or exit-value_ != null: return
-    critical-do --respect-deadline=false:
+    if ignored_ or exit-value_: return
+    critical-do --no-respect-deadline:
       if state_:
         state_.dispose
         state_ = null
       dont-wait-for_ child-process_
       ignored_ = true
+      remove-finalizer this
 
 /**
 Forks a process.
