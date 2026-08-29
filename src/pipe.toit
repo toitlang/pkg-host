@@ -288,32 +288,52 @@ class Process:
   /**
   Requests that the child process terminate.
 
-  On POSIX systems the default is a catchable termination request. If
-    $hard-after-ms is provided and the process has not exited after that many
-    milliseconds, a signal that cannot be caught is sent. A value of 0 sends
-    only the hard termination signal. The call waits during the grace period,
-    but does not wait for the process after sending the hard signal.
+  On POSIX systems the default is a catchable termination request. If $hard is
+    true, a signal that cannot be caught is sent instead.
 
   Windows has no equivalent catchable termination request for arbitrary child
     processes, so it always terminates the process immediately there.
+  */
+  kill --hard/bool=false -> none:
+    signal-value := hard ? SIGNAL-KILL_ : SIGNAL-TERMINATE_
+    if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+      signal-value = SIGNAL-KILL_
+    signal signal-value
+
+  /**
+  Requests that the child process terminate and waits for it to exit.
+
+  On POSIX systems the initial request is catchable. If $hard-after-ms is
+    provided and the process has not exited after that many milliseconds, a
+    signal that cannot be caught is sent. A value of 0 sends only the hard
+    termination signal.
+
+  Windows has no equivalent catchable termination request for arbitrary child
+    processes, so it always terminates the process immediately before waiting.
 
   Throws `OUT_OF_RANGE` if $hard-after-ms is negative.
   */
-  kill --hard-after-ms/int?=null -> none:
+  kill --wait/True --hard-after-ms/int?=null -> none:
     if hard-after-ms != null and hard-after-ms < 0: throw "OUT_OF_RANGE"
 
     if hard-after-ms == 0 or sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
-      signal SIGNAL-KILL_
+      kill --hard
+      this.wait
       return
 
-    signal SIGNAL-TERMINATE_
-    if hard-after-ms != null:
-      // Once a grace period has been requested, guarantee the escalation even
-      // if the caller has an earlier deadline or is canceled concurrently.
-      critical-do --respect-deadline=false:
-        error := catch --unwind=(: it != DEADLINE-EXCEEDED-ERROR):
-          with-timeout --ms=hard-after-ms: wait
-        if error: signal SIGNAL-KILL_
+    kill
+    if hard-after-ms == null:
+      this.wait
+      return
+
+    escalation-deadline := Time.monotonic-us + hard-after-ms * 1_000
+    outer-deadline := Task.current.deadline
+    escalation-is-first := not outer-deadline or escalation-deadline <= outer-deadline
+    error := catch --unwind=(: it != DEADLINE-EXCEEDED-ERROR or not escalation-is-first):
+      with-timeout --ms=hard-after-ms: this.wait
+    if error:
+      kill --hard
+      this.wait
 
   /**
   Sends the platform-specific signal $value to the child process.
