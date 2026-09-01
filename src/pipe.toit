@@ -157,6 +157,10 @@ class OpenPipe_ implements Stream:
     while true:
       if not state_: return null
       state_.wait-for-state READ-EVENT_ | CLOSE-EVENT_
+      // Another task may have closed the pipe while we were waiting. Since
+      // $close clears 'state_' before it invalidates the resource, and since
+      // there is no suspension point between this check and the read below,
+      // the resource is still valid when 'state_' is non-null.
       if not state_: return null
       result := read-from-pipe_ resource_
       if result != -1:
@@ -182,10 +186,14 @@ class OpenPipe_ implements Stream:
     return bytes-written
 
   close:
+    state := state_
+    if not state: return
+    // Mark the pipe as closed before invalidating the resource, so that a
+    // read that is in progress in another task aborts and returns null,
+    // instead of hitting 'ALREADY_CLOSED' in the read primitive.
+    state_ = null
+    state.dispose
     close-resource_ resource_
-    if state_:
-      state_.dispose
-      state_ = null
     if input_ == PARENT-TO-CHILD_:
       check-exit_ pid child-process-name_
 
