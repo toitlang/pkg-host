@@ -105,6 +105,7 @@ class OpenPipe_ implements Stream:
   pid := null
   child-process-name_ /string?
   input_ /int := UNKNOWN-DIRECTION_
+  write-mutex_/monitor.Mutex ::= monitor.Mutex
 
   fd_/any  // Other end of descriptor, for child process.
   in_ /OpenPipeReader_? := null
@@ -180,10 +181,15 @@ class OpenPipe_ implements Stream:
 
   try-write_ data/io.Data from/int to/int -> int:
     if from == to: return 0
-    state_.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
-    bytes-written := write-to-pipe_ resource_ data from to
-    if bytes-written == 0: state_.clear-state WRITE-EVENT_
-    return bytes-written
+    // Only one task may own a queued write and collect its completion.
+    return write-mutex_.do:
+      while true:
+        if not state_: throw "WRITER_CLOSED"
+        state := state_
+        bytes-written := write-to-pipe_ resource_ state data from to
+        if bytes-written != 0: return bytes-written
+        state.clear-state WRITE-EVENT_
+        state.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
 
   close:
     state := state_
@@ -223,14 +229,31 @@ pipe-init_:
 create-pipe_ resource-group input/bool:
   #primitive.pipe.create-pipe
 
-write-to-pipe_ pipe data/io.Data from to:
-  #primitive.pipe.write: | error |
-    written := 0
+write-to-pipe_ pipe state/monitor.ResourceState_ data/io.Data from to:
+  written := 0
+  error := catch: written = start-write-to-pipe_ pipe data from to
+  if error:
     io.primitive-redo-chunked-io-data_ error data from to: | chunk/ByteArray |
-      chunk-written := write-to-pipe_ pipe chunk 0 chunk.size
+      chunk-written := write-to-pipe_ pipe state chunk 0 chunk.size
       written += chunk-written
       if chunk-written < chunk.size: return written
     return written
+  if written == 0: return 0
+
+  // Windows queues an overlapped write. Wait for its actual result before
+  // reporting success, so an immediate close cannot discard unwritten data.
+  while true:
+    if not state.resource: throw "WRITER_CLOSED"
+    state.clear-state WRITE-EVENT_
+    result := write-result_ pipe written
+    if result != null: return result
+    state.wait-for-state WRITE-EVENT_ | ERROR-EVENT_
+
+start-write-to-pipe_ pipe data/io.Data from to:
+  #primitive.pipe.write
+
+write-result_ pipe written/int:
+  #primitive.pipe.write-result
 
 read-from-pipe_ pipe:
   #primitive.pipe.read
