@@ -15,7 +15,8 @@ Supports filesystem paths on Linux and macOS/BSD. Requires a runtime with the
 Paths must be nonempty, contain no NUL bytes, and fit the operating system's
   socket address limit, measured in encoded bytes. Relative paths are resolved
   against the Toit process current directory; path queries return the resolved
-  pathname.
+  pathname. Queries throw `ILLEGAL_UTF_8` if a pathname supplied by an external
+  peer is not valid UTF-8.
 
 Listening never removes an existing file. Closing a socket never removes its
   pathname; the application must delete it when appropriate. Prefer a private
@@ -81,7 +82,11 @@ abstract class SocketResource_:
         if state_: state_.dispose
         close_ resource-group_ resource
 
-  /** Returns the bound local pathname, or null for an unnamed endpoint. */
+  /**
+  Returns the bound local pathname, or null for an unnamed endpoint.
+
+  Throws `ILLEGAL_UTF_8` if the pathname is not valid UTF-8.
+  */
   local-path -> string?:
     return path_ ensure-state_.resource false
 
@@ -128,7 +133,11 @@ class Socket extends SocketResource_ with io.CloseableInMixin io.CloseableOutMix
   constructor.create_ resource:
     super resource
 
-  /** Returns the peer pathname, or null for an unnamed endpoint. */
+  /**
+  Returns the peer pathname, or null for an unnamed endpoint.
+
+  Throws `ILLEGAL_UTF_8` if the peer supplied a pathname that is not valid UTF-8.
+  */
   peer-path -> string?:
     return path_ ensure-state_.resource true
 
@@ -216,4 +225,8 @@ error_ number/int -> string:
   #primitive.unix-socket.error
 
 path_ resource peer/bool -> string?:
+  bytes := path-bytes_ resource peer
+  return bytes ? bytes.to-string : null
+
+path-bytes_ resource peer/bool -> ByteArray?:
   #primitive.unix-socket.path

@@ -28,6 +28,8 @@ main:
 Use `unix.listen path --backlog=10` to create a listener and `server.accept` to
 wait for a connection. Connected sockets expose `in` and `out` streams,
 `local-path`, `peer-path`, and `close`. Unnamed endpoints have a null path.
+Path queries throw `ILLEGAL_UTF_8` for non-UTF-8 pathnames supplied by external
+peers; the connection remains usable.
 Closing `out` sends EOF to the peer while leaving `in` usable. Closing the
 socket interrupts pending reads and writes; closing the listener interrupts
 pending accepts. Repeated `close` calls are harmless.

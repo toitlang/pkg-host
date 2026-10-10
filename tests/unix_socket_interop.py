@@ -59,22 +59,29 @@ def main(toit):
                 finish(process)
         path.unlink()
 
-        process = start(toit, "server", path)
-        try:
-            with selectors.DefaultSelector() as selector:
-                selector.register(process.stdout, selectors.EVENT_READ)
-                assert selector.select(timeout=10), "Listener did not become ready"
-                assert process.stdout.readline() == b"ready\n"
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-                connection.settimeout(10)
-                connection.connect(str(path))
-                connection.sendall(b"from-python")
-                connection.shutdown(socket.SHUT_WR)
-                assert receive_all(connection) == b"from-toit"
-        finally:
-            finish(process)
-        assert path.exists(), "Closing the listener must preserve its pathname"
-        path.unlink()
+        modes = ["server"]
+        # Linux permits arbitrary filename bytes; macOS filesystems may not.
+        if sys.platform == "linux":
+            modes.append("server-invalid-peer")
+        for mode in modes:
+            process = start(toit, mode, path)
+            try:
+                with selectors.DefaultSelector() as selector:
+                    selector.register(process.stdout, selectors.EVENT_READ)
+                    assert selector.select(timeout=10), "Listener did not become ready"
+                    assert process.stdout.readline() == b"ready\n"
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+                    connection.settimeout(10)
+                    if mode == "server-invalid-peer":
+                        connection.bind(bytes(path.with_name("peer-")) + b"\xff")
+                    connection.connect(str(path))
+                    connection.sendall(b"from-python")
+                    connection.shutdown(socket.SHUT_WR)
+                    assert receive_all(connection) == b"from-toit"
+            finally:
+                finish(process)
+            assert path.exists(), "Closing the listener must preserve its pathname"
+            path.unlink()
 
 
 if __name__ == "__main__":

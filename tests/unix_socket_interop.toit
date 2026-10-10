@@ -22,6 +22,12 @@ main args/List:
       print "ready"
       socket := server.accept
       try:
+        expect-equals path socket.local-path
+        if mode == "server-invalid-peer":
+          expect-throw "ILLEGAL_UTF_8": socket.peer-path
+        else:
+          expect-null socket.peer-path
+        // A failed pathname conversion must leave the connection usable.
         expect-equals "from-python" socket.in.read-all.to-string
         socket.out.write "from-toit"
         socket.out.close
