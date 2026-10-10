@@ -10,17 +10,44 @@ import .directory as directory
 /**
 Unix domain stream sockets for local interprocess communication.
 
-Supports filesystem paths on Linux and macOS/BSD.
-Paths must be nonempty, contain no NUL bytes, and fit the operating system's
-  socket address limit, measured in encoded bytes. Relative paths are resolved
-  against the Toit process current directory; path queries return the resolved
-  pathname. Queries throw `ILLEGAL_UTF_8` if a pathname supplied by an external
-  peer is not valid UTF-8.
+Supports filesystem paths on Linux and macOS/BSD. Abstract addresses,
+  datagrams, descriptor passing, and peer credentials are not supported.
+Use $connect to connect to a listener, or $listen and $ServerSocket.accept to
+  accept connections. A connected $Socket provides `in` and `out`
+  streams. Closing the output stream sends EOF to the peer while leaving the
+  input stream usable.
+Closing a socket interrupts pending reads and writes; closing a listener
+  interrupts pending accepts. Repeated close calls have no effect.
 
-Listening never removes an existing file. Closing a socket never removes its
+# Paths
+Paths must be nonempty, contain no NUL bytes, and fit the operating system's
+  socket address limit, measured in encoded bytes including the terminating
+  NUL. Relative paths are resolved against the Toit process current directory;
+  path queries return the resolved pathname. Unnamed endpoints have a null
+  path.
+Queries throw `ILLEGAL_UTF_8` if a pathname supplied by an external peer is not
+  valid UTF-8. The connection remains usable after this error.
+
+Listening fails if the path already exists. Closing a socket never removes its
   pathname; the application must delete it when appropriate. Prefer a private
-  directory for socket files. Permissions follow the operating system's rules
+  directory for socket files and clean up explicitly with `host.file.delete`
+  and `host.directory.rmdir`. Permissions follow the operating system's rules
   and the process umask.
+
+# Examples
+Connects to a service, sends a request, and reads its response until EOF:
+```
+import host.unix-socket as unix
+
+main:
+  socket := unix.connect "/tmp/my-service/socket"
+  try:
+    socket.out.write "request"
+    socket.out.close  // Finish the request, while continuing to read.
+    print socket.in.read-all.to-string
+  finally:
+    socket.close
+```
 */
 
 /**
@@ -84,7 +111,8 @@ abstract class SocketResource_:
   /**
   Returns the bound local pathname, or null for an unnamed endpoint.
 
-  Throws `ILLEGAL_UTF_8` if the pathname is not valid UTF-8.
+  Throws `ILLEGAL_UTF_8` if the pathname is not valid UTF-8. The socket remains
+    usable after this error.
   */
   local-path -> string?:
     return path_ ensure-state_.resource false
@@ -136,6 +164,7 @@ class Socket extends SocketResource_ with io.CloseableInMixin io.CloseableOutMix
   Returns the peer pathname, or null for an unnamed endpoint.
 
   Throws `ILLEGAL_UTF_8` if the peer supplied a pathname that is not valid UTF-8.
+    The connection remains usable after this error.
   */
   peer-path -> string?:
     return path_ ensure-state_.resource true
