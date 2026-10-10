@@ -9,6 +9,11 @@ set(TOIT_EXEC "toit${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "The executable us
 set(TEST_TIMEOUT 40 CACHE STRING "The maximal amount of time each test is allowed to run")
 set(SLOW_TEST_TIMEOUT 200 CACHE STRING "The maximal amount of time each slow test is allowed to run")
 
+# Unix domain sockets are only supported on Unix hosts.
+if(NOT UNIX)
+  list(REMOVE_ITEM TESTS "unix_socket_test.toit")
+endif()
+
 add_custom_target(
   "install-pkgs"
   COMMAND "${TOIT_EXEC}" pkg install
@@ -62,3 +67,15 @@ foreach(file ${TESTS})
   endif()
 
 endforeach()
+
+if(UNIX)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_Interpreter_FOUND)
+    add_test(
+      NAME "/tests/unix_socket_interop"
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/unix_socket_interop.py" "${TOIT_EXEC}"
+      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+    set_tests_properties("/tests/unix_socket_interop" PROPERTIES TIMEOUT ${TEST_TIMEOUT})
+  endif()
+endif()
