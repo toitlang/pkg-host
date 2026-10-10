@@ -7,10 +7,7 @@ These libraries don't run on the ESP32 and are only useful on desktop machines.
 ## Unix domain sockets
 
 `host.unix-socket` provides filesystem-addressed stream sockets on Linux and
-macOS/BSD. It requires an SDK/runtime containing the `unix_socket` primitives;
-SDK releases predating those primitives cannot compile this library. Until the
-first release containing them, use an SDK built from the corresponding Toit
-sources.
+macOS/BSD.
 
 ```toit
 import host.unix-socket as unix
@@ -50,10 +47,9 @@ tasks and demonstrates temporary-directory cleanup:
 toit run examples/unix-socket.toit
 ```
 
-The ordinary test suite enables Unix socket behavior tests when the selected
-SDK/runtime provides the primitives on a Unix host. Older SDKs continue to run
-the remaining tests. When Python 3 is available, CTest also checks interoperability with Python sockets
-in both directions. Run that check directly with:
+The ordinary test suite includes Unix socket behavior tests on Unix hosts.
+When Python 3 is available, CTest also checks interoperability with Python
+sockets in both directions. Run that check directly with:
 
 ```sh
 python3 tests/unix_socket_interop.py /path/to/toit

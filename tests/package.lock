@@ -1,11 +1,11 @@
+sdk: ^2.0.0-alpha.199.1
 prefixes:
-  host: ..
-  semver: toit-semver
+  host: pkg-host
+  semver: github.com/toitware/toit-semver-1
 packages:
-  ..:
-    path: ..
-  toit-semver:
-    url: github.com/toitware/toit-semver
-    name: semver
-    version: 1.1.0
+  github.com/toitware/toit-semver-1:
     hash: a681bad211f7d4803dfdc2a0068706559458274e
+    url: github.com/toitware/toit-semver
+    version: 1.1.0
+  pkg-host:
+    path: ..

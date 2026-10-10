@@ -10,8 +10,7 @@ import .directory as directory
 /**
 Unix domain stream sockets for local interprocess communication.
 
-Supports filesystem paths on Linux and macOS/BSD. Requires a runtime with the
-  `unix_socket` primitives. Other platforms are not supported.
+Supports filesystem paths on Linux and macOS/BSD.
 Paths must be nonempty, contain no NUL bytes, and fit the operating system's
   socket address limit, measured in encoded bytes. Relative paths are resolved
   against the Toit process current directory; path queries return the resolved

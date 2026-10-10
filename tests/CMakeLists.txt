@@ -9,24 +9,9 @@ set(TOIT_EXEC "toit${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "The executable us
 set(TEST_TIMEOUT 40 CACHE STRING "The maximal amount of time each test is allowed to run")
 set(SLOW_TEST_TIMEOUT 200 CACHE STRING "The maximal amount of time each slow test is allowed to run")
 
-# Keep testing the rest of host with older SDKs that cannot compile the new
-# primitive calls. Probe the runtime as well as the compiler before enabling
-# the Unix socket tests.
-set(HAS_UNIX_SOCKETS FALSE)
-if(UNIX)
-  execute_process(
-    COMMAND "${TOIT_EXEC}" run "${CMAKE_CURRENT_SOURCE_DIR}/unix_socket_probe.toit"
-    RESULT_VARIABLE UNIX_SOCKET_PROBE_RESULT
-    OUTPUT_QUIET
-    ERROR_QUIET
-  )
-  if("${UNIX_SOCKET_PROBE_RESULT}" STREQUAL "0")
-    set(HAS_UNIX_SOCKETS TRUE)
-  endif()
-endif()
-if(NOT HAS_UNIX_SOCKETS)
+# Unix domain sockets are only supported on Unix hosts.
+if(NOT UNIX)
   list(REMOVE_ITEM TESTS "unix_socket_test.toit")
-  message(STATUS "Skipping Unix socket tests: SDK/runtime or platform lacks Unix socket support")
 endif()
 
 add_custom_target(
@@ -83,7 +68,7 @@ foreach(file ${TESTS})
 
 endforeach()
 
-if(HAS_UNIX_SOCKETS)
+if(UNIX)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_Interpreter_FOUND)
     add_test(
