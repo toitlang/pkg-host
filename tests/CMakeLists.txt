@@ -62,3 +62,23 @@ foreach(file ${TESTS})
   endif()
 
 endforeach()
+
+# The terminal test needs a pseudo-terminal, which the runner provides.
+if(UNIX)
+  add_executable(terminal_test_runner terminal_test_runner_posix.cc)
+  find_library(TERMINAL_UTIL_LIBRARY util)
+  if(TERMINAL_UTIL_LIBRARY)
+    target_link_libraries(terminal_test_runner PRIVATE ${TERMINAL_UTIL_LIBRARY})
+  endif()
+elseif(WIN32)
+  add_executable(terminal_test_runner terminal_test_runner_win.cc)
+endif()
+
+if(TARGET terminal_test_runner)
+  add_test(
+    NAME "/tests/terminal_pty.toit"
+    COMMAND $<TARGET_FILE:terminal_test_runner> "${TOIT_EXEC}" run "tests/terminal_pty.toit"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties("/tests/terminal_pty.toit" PROPERTIES TIMEOUT ${TEST_TIMEOUT})
+endif()

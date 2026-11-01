@@ -42,6 +42,9 @@ For less common operations, import the specific module directly:
   $pipe.to, $pipe.from, $pipe.system, etc.
 - `import host.directory` for $directory.mkdtemp and the low-level
   $directory.DirectoryStream.
+- `import host.signal` for process signal catching.
+- `import host.terminal` for raw terminal setting and watching terminal
+  dimensions.
 
 # Examples
 

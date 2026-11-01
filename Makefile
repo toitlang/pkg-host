@@ -12,7 +12,7 @@ install-pkgs: rebuild-cmake
 	cmake --build build --target install-pkgs
 
 test: install-pkgs rebuild-cmake
-	cmake --build build --target crash
+	cmake --build build
 	cmake --build build --target check
 
 # We rebuild the cmake file all the time.

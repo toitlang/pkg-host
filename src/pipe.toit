@@ -8,6 +8,7 @@ import monitor
 import reader as old-reader
 import system as sdk-system
 
+import .signal show Signal TERM KILL
 import .stream
 
 export Stream
@@ -23,9 +24,6 @@ PROCESS-EXIT-CODE-SHIFT_ ::= 2
 PROCESS-EXIT-CODE-MASK_ ::= 0xff
 PROCESS-SIGNAL-SHIFT_ ::= 10
 PROCESS-SIGNAL-MASK_ ::= 0xff
-
-SIGNAL-KILL_ ::= 9
-SIGNAL-TERMINATE_ ::= 15
 
 READ-EVENT_ ::= 1 << 0
 WRITE-EVENT_ ::= 1 << 1
@@ -326,10 +324,11 @@ class Process:
     processes, so it always terminates the process immediately there.
   */
   kill --hard/bool=false -> none:
-    signal-value := hard ? SIGNAL-KILL_ : SIGNAL-TERMINATE_
-    if sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
-      signal-value = SIGNAL-KILL_
-    signal signal-value
+    // Windows has no TERM for other processes.
+    if hard or sdk-system.platform == sdk-system.PLATFORM-WINDOWS:
+      signal KILL
+    else:
+      signal TERM
 
   /**
   Requests that the child process terminate and waits for it to exit.
@@ -366,13 +365,18 @@ class Process:
       this.wait
 
   /**
-  Sends the platform-specific signal $value to the child process.
+  Sends the signal $value to the child process.
 
-  POSIX systems accept their native signal numbers. Windows only supports
-    signal 9, which terminates the process immediately.
+  The $value is a platform-agnostic $Signal or a platform-specific signal
+    number. POSIX systems accept their native signal numbers. Windows only
+    supports $KILL, which terminates the process immediately.
+
+  Throws if a $Signal is not supported on this platform.
   */
-  signal value/int -> none:
-    kill_ pid value
+  signal value/any -> none:
+    number/int? := value is Signal ? value.number : value
+    if not number: throw "UNSUPPORTED"
+    kill_ pid number
 
   /**
   Waits for the process to finish and returns the raw exit value.

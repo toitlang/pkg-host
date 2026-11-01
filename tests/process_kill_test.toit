@@ -4,6 +4,7 @@
 
 import expect show *
 import host.pipe
+import host.signal
 import system show platform PLATFORM-FREERTOS PLATFORM-WINDOWS
 
 SIGKILL ::= 9
@@ -19,6 +20,7 @@ main:
   test-invalid-grace-period
   test-signal
   if platform != PLATFORM-WINDOWS:
+    test-signal-object
     test-ignored-signal
     test-handled-signal
     test-outer-timeout
@@ -53,6 +55,18 @@ test-signal:
   process.signal SIGKILL
   exit-value := with-timeout --ms=1_000: process.wait
   expect-equals SIGKILL (pipe.exit-signal exit-value)
+
+test-signal-object:
+  process := pipe.fork --create-stdin "cat" ["cat"]
+  process.signal signal.TERM
+  exit-value := with-timeout --ms=1_000: process.wait
+  expect-equals SIGTERM (pipe.exit-signal exit-value)
+  expect-identical signal.TERM (signal.Signal.from-number (pipe.exit-signal exit-value))
+
+  process = pipe.fork --create-stdin "cat" ["cat"]
+  expect-throw "UNSUPPORTED": process.signal signal.BREAK
+  process.kill --hard
+  process.wait
 
 test-ignored-signal:
   // Wait for the shell to install the handler before sending the signal.
